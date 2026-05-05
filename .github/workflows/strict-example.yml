@@ -1,4 +1,4 @@
-name: Strict AI Quality Gate (LLM Enhanced)
+name: Strict AI Quality Gate (LLM + Auto-Review)
 
 on:
   pull_request:
@@ -7,11 +7,11 @@ on:
 permissions:
   pull-requests: write
   issues: write
-  contents: write   # required for score history tracking
+  contents: write
 
 jobs:
   quality-gate:
-    name: Quality Gate (Strict + LLM)
+    name: Quality Gate (Strict)
     runs-on: ubuntu-latest
     steps:
       - name: Run AI Contribution Quality Filter
@@ -20,16 +20,30 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
-          # llm-model: gpt-4o   # upgrade for highest accuracy
+
+          # Scoring
           min-quality-score: 70
           ai-detection-threshold: 0.55
+
+          # Fail the CI check so the status shows red
           fail-on-low-quality: true
-          comment-on-pr: true
-          label-pr: true
+
+          # Request changes when score < 70 (blocks merge via branch protection)
+          request-changes-on-low-quality: true
+          request-changes-threshold: 70
+
+          # Auto-approve when score >= 70 and no AI detected
+          auto-approve-on-pass: true
+
+          # Hard-reject completely hopeless PRs (score < 20)
+          auto-close-on-low-quality: true
+          auto-close-threshold: 20
+
+          # History
           track-history: true
 
       - name: Print results
         run: |
-          echo "Quality Score : ${{ steps.quality.outputs.quality-score }}/100"
-          echo "AI Detected   : ${{ steps.quality.outputs.ai-detected }}"
-          echo "Passed        : ${{ steps.quality.outputs.passed }}"
+          echo "Score : ${{ steps.quality.outputs.quality-score }}/100"
+          echo "Passed: ${{ steps.quality.outputs.passed }}"
+          echo "AI    : ${{ steps.quality.outputs.ai-detected }}"

@@ -72,6 +72,48 @@ inputs:
     required: false
     default: 'quality-verified'
 
+  # ── Automated review actions ─────────────────────────────────────────────────
+  request-changes-on-low-quality:
+    description: |
+      Submit a "Request changes" GitHub review when the quality score is below
+      request-changes-threshold. The review blocks merge until dismissed or resolved.
+      Requires "pull-requests: write" permission.
+    required: false
+    default: 'false'
+  request-changes-threshold:
+    description: |
+      Quality score threshold for requesting changes (0-100).
+      Defaults to the value of min-quality-score if not set.
+    required: false
+    default: ''
+  auto-approve-on-pass:
+    description: |
+      Submit an "Approve" review when the PR passes the quality threshold AND
+      no AI-generated code is detected. Only enable this if you trust the action
+      as a sole reviewer for basic quality gating.
+      Requires "pull-requests: write" permission.
+    required: false
+    default: 'false'
+  auto-close-on-low-quality:
+    description: |
+      Automatically close the PR when the quality score drops below
+      auto-close-threshold. Use with caution — this is a hard rejection.
+      Requires "pull-requests: write" and "contents: write" permissions.
+    required: false
+    default: 'false'
+  auto-close-threshold:
+    description: |
+      Quality score threshold for auto-closing the PR (0-100).
+      Should be lower than min-quality-score. Default: 20.
+    required: false
+    default: '20'
+  auto-close-comment:
+    description: |
+      Custom comment posted when a PR is auto-closed. Leave empty for the
+      default message that explains the score and how to re-open.
+    required: false
+    default: ''
+
   # ── Score history & badge ───────────────────────────────────────────────────
   track-history:
     description: |

@@ -17581,12 +17581,12 @@ var require_lib = __commonJS({
             throw new Error("Client has already been disposed.");
           }
           const parsedUrl = new URL(requestUrl);
-          let info4 = this._prepareRequest(verb, parsedUrl, headers);
+          let info5 = this._prepareRequest(verb, parsedUrl, headers);
           const maxTries = this._allowRetries && RetryableHttpVerbs.includes(verb) ? this._maxRetries + 1 : 1;
           let numTries = 0;
           let response;
           do {
-            response = yield this.requestRaw(info4, data);
+            response = yield this.requestRaw(info5, data);
             if (response && response.message && response.message.statusCode === HttpCodes.Unauthorized) {
               let authenticationHandler;
               for (const handler of this.handlers) {
@@ -17596,7 +17596,7 @@ var require_lib = __commonJS({
                 }
               }
               if (authenticationHandler) {
-                return authenticationHandler.handleAuthentication(this, info4, data);
+                return authenticationHandler.handleAuthentication(this, info5, data);
               } else {
                 return response;
               }
@@ -17619,8 +17619,8 @@ var require_lib = __commonJS({
                   }
                 }
               }
-              info4 = this._prepareRequest(verb, parsedRedirectUrl, headers);
-              response = yield this.requestRaw(info4, data);
+              info5 = this._prepareRequest(verb, parsedRedirectUrl, headers);
+              response = yield this.requestRaw(info5, data);
               redirectsRemaining--;
             }
             if (!response.message.statusCode || !HttpResponseRetryCodes.includes(response.message.statusCode)) {
@@ -17649,7 +17649,7 @@ var require_lib = __commonJS({
        * @param info
        * @param data
        */
-      requestRaw(info4, data) {
+      requestRaw(info5, data) {
         return __awaiter(this, void 0, void 0, function* () {
           return new Promise((resolve, reject) => {
             function callbackForResult(err, res) {
@@ -17661,7 +17661,7 @@ var require_lib = __commonJS({
                 resolve(res);
               }
             }
-            this.requestRawWithCallback(info4, data, callbackForResult);
+            this.requestRawWithCallback(info5, data, callbackForResult);
           });
         });
       }
@@ -17671,12 +17671,12 @@ var require_lib = __commonJS({
        * @param data
        * @param onResult
        */
-      requestRawWithCallback(info4, data, onResult) {
+      requestRawWithCallback(info5, data, onResult) {
         if (typeof data === "string") {
-          if (!info4.options.headers) {
-            info4.options.headers = {};
+          if (!info5.options.headers) {
+            info5.options.headers = {};
           }
-          info4.options.headers["Content-Length"] = Buffer.byteLength(data, "utf8");
+          info5.options.headers["Content-Length"] = Buffer.byteLength(data, "utf8");
         }
         let callbackCalled = false;
         function handleResult(err, res) {
@@ -17685,7 +17685,7 @@ var require_lib = __commonJS({
             onResult(err, res);
           }
         }
-        const req = info4.httpModule.request(info4.options, (msg) => {
+        const req = info5.httpModule.request(info5.options, (msg) => {
           const res = new HttpClientResponse(msg);
           handleResult(void 0, res);
         });
@@ -17697,7 +17697,7 @@ var require_lib = __commonJS({
           if (socket) {
             socket.end();
           }
-          handleResult(new Error(`Request timeout: ${info4.options.path}`));
+          handleResult(new Error(`Request timeout: ${info5.options.path}`));
         });
         req.on("error", function(err) {
           handleResult(err);
@@ -17733,27 +17733,27 @@ var require_lib = __commonJS({
         return this._getProxyAgentDispatcher(parsedUrl, proxyUrl);
       }
       _prepareRequest(method, requestUrl, headers) {
-        const info4 = {};
-        info4.parsedUrl = requestUrl;
-        const usingSsl = info4.parsedUrl.protocol === "https:";
-        info4.httpModule = usingSsl ? https : http;
+        const info5 = {};
+        info5.parsedUrl = requestUrl;
+        const usingSsl = info5.parsedUrl.protocol === "https:";
+        info5.httpModule = usingSsl ? https : http;
         const defaultPort = usingSsl ? 443 : 80;
-        info4.options = {};
-        info4.options.host = info4.parsedUrl.hostname;
-        info4.options.port = info4.parsedUrl.port ? parseInt(info4.parsedUrl.port) : defaultPort;
-        info4.options.path = (info4.parsedUrl.pathname || "") + (info4.parsedUrl.search || "");
-        info4.options.method = method;
-        info4.options.headers = this._mergeHeaders(headers);
+        info5.options = {};
+        info5.options.host = info5.parsedUrl.hostname;
+        info5.options.port = info5.parsedUrl.port ? parseInt(info5.parsedUrl.port) : defaultPort;
+        info5.options.path = (info5.parsedUrl.pathname || "") + (info5.parsedUrl.search || "");
+        info5.options.method = method;
+        info5.options.headers = this._mergeHeaders(headers);
         if (this.userAgent != null) {
-          info4.options.headers["user-agent"] = this.userAgent;
+          info5.options.headers["user-agent"] = this.userAgent;
         }
-        info4.options.agent = this._getAgent(info4.parsedUrl);
+        info5.options.agent = this._getAgent(info5.parsedUrl);
         if (this.handlers) {
           for (const handler of this.handlers) {
-            handler.prepareRequest(info4.options);
+            handler.prepareRequest(info5.options);
           }
         }
-        return info4;
+        return info5;
       }
       _mergeHeaders(headers) {
         if (this.requestOptions && this.requestOptions.headers) {
@@ -19735,18 +19735,18 @@ Support boolean input list: \`true | True | TRUE | false | False | FALSE\``);
       (0, command_1.issueCommand)("error", (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
     }
     exports2.error = error;
-    function warning3(message, properties = {}) {
+    function warning4(message, properties = {}) {
       (0, command_1.issueCommand)("warning", (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
     }
-    exports2.warning = warning3;
+    exports2.warning = warning4;
     function notice(message, properties = {}) {
       (0, command_1.issueCommand)("notice", (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
     }
     exports2.notice = notice;
-    function info4(message) {
+    function info5(message) {
       process.stdout.write(message + os.EOL);
     }
-    exports2.info = info4;
+    exports2.info = info5;
     function startGroup(name) {
       (0, command_1.issue)("group", name);
     }
@@ -23878,7 +23878,7 @@ var require_github = __commonJS({
 });
 
 // src/main.ts
-var core3 = __toESM(require_core(), 1);
+var core4 = __toESM(require_core(), 1);
 var github2 = __toESM(require_github(), 1);
 
 // ../node_modules/.pnpm/balanced-match@4.0.4/node_modules/balanced-match/dist/esm/index.js
@@ -26552,15 +26552,171 @@ function buildTrend(history, currentScore) {
 ${rows.join("\n")}`;
 }
 
+// src/reviewer.ts
+var core3 = __toESM(require_core(), 1);
+var REVIEW_MARKER = "<!-- ai-quality-filter-review -->";
+async function submitReview(octokit, result, config) {
+  const { repoOwner: owner, repoName: repo, prNumber, qualityScore, aiDetected, aiConfidence, passed } = result;
+  const shouldRequestChanges = config.requestChangesOnLowQuality && qualityScore < config.requestChangesThreshold;
+  const shouldAutoApprove = config.autoApproveOnPass && passed && !aiDetected;
+  const shouldClose = config.autoCloseOnLowQuality && qualityScore < config.autoCloseThreshold;
+  await dismissPreviousReview(octokit, owner, repo, prNumber);
+  if (shouldRequestChanges) {
+    const body = buildRequestChangesBody(result, config.requestChangesThreshold);
+    await octokit.rest.pulls.createReview({
+      owner,
+      repo,
+      pull_number: prNumber,
+      event: "REQUEST_CHANGES",
+      body: REVIEW_MARKER + "\n" + body
+    });
+    core3.info(`\u{1F534} Requested changes on PR #${prNumber} (score ${qualityScore} < threshold ${config.requestChangesThreshold})`);
+  } else if (shouldAutoApprove) {
+    const body = buildApproveBody(result);
+    await octokit.rest.pulls.createReview({
+      owner,
+      repo,
+      pull_number: prNumber,
+      event: "APPROVE",
+      body: REVIEW_MARKER + "\n" + body
+    });
+    core3.info(`\u2705 Auto-approved PR #${prNumber} (score ${qualityScore}/100, no AI detected)`);
+  } else {
+    core3.info(`\u2139\uFE0F No automated review submitted (score ${qualityScore}/100, passed=${passed}, ai=${aiDetected})`);
+  }
+  if (shouldClose) {
+    await closePr(octokit, owner, repo, prNumber, result, config.autoCloseThreshold, config.autoCloseComment);
+  }
+}
+async function dismissPreviousReview(octokit, owner, repo, prNumber) {
+  try {
+    const { data: reviews } = await octokit.rest.pulls.listReviews({
+      owner,
+      repo,
+      pull_number: prNumber
+    });
+    const botLogin = (await octokit.rest.users.getAuthenticated()).data.login;
+    for (const review of reviews) {
+      if (review.user?.login === botLogin && review.body?.includes(REVIEW_MARKER) && review.state === "CHANGES_REQUESTED") {
+        try {
+          await octokit.rest.pulls.dismissReview({
+            owner,
+            repo,
+            pull_number: prNumber,
+            review_id: review.id,
+            message: "Dismissed by AI Contribution Quality Filter \u2014 re-analyzing updated PR."
+          });
+          core3.info(`Dismissed previous review #${review.id}`);
+        } catch (e) {
+          core3.warning(`Could not dismiss previous review: ${e.message}`);
+        }
+      }
+    }
+  } catch (e) {
+    core3.warning(`Could not list previous reviews: ${e.message}`);
+  }
+}
+async function closePr(octokit, owner, repo, prNumber, result, threshold, customComment) {
+  const comment = customComment || buildAutoCloseComment(result, threshold);
+  try {
+    await octokit.rest.issues.createComment({
+      owner,
+      repo,
+      issue_number: prNumber,
+      body: comment
+    });
+    await octokit.rest.pulls.update({
+      owner,
+      repo,
+      pull_number: prNumber,
+      state: "closed"
+    });
+    core3.info(`\u{1F6AB} Auto-closed PR #${prNumber} (score ${result.qualityScore} < auto-close threshold ${threshold})`);
+  } catch (e) {
+    core3.warning(`Could not auto-close PR: ${e.message}`);
+  }
+}
+function buildRequestChangesBody(result, threshold) {
+  const { qualityScore, aiDetected, aiConfidence, summary, llmAnalysis } = result;
+  const scoreBar = buildBar(qualityScore);
+  const topIssues = summary.topQualityIssues.slice(0, 4);
+  const topSignals = summary.topAiSignals.slice(0, 3);
+  const suggestions = llmAnalysis?.suggestions ?? [];
+  const issuesBlock = topIssues.length > 0 ? `**Issues found:**
+${topIssues.map((i) => `- ${i}`).join("\n")}` : "";
+  const aiBlock = aiDetected ? `
+
+**AI code signals detected (${Math.round(aiConfidence * 100)}% confidence):**
+${topSignals.map((s) => `- ${s}`).join("\n")}` : "";
+  const suggestionsBlock = suggestions.length > 0 ? `
+
+**To resolve these issues:**
+${suggestions.map((s) => `- ${s}`).join("\n")}` : `
+
+**To resolve these issues:**
+- Review and refactor AI-generated sections with proper domain context
+- Add error handling around I/O operations and API calls
+- Write tests for new functionality
+- Use descriptive, meaningful names for variables and functions`;
+  return `## \u{1F534} Changes Requested \u2014 Quality Score Below Threshold
+
+This PR scored **${qualityScore}/100**, which is below the required minimum of **${threshold}/100**.
+
+\`${scoreBar}\` **${qualityScore}/100**
+
+${issuesBlock}${aiBlock}${suggestionsBlock}
+
+Please address the issues above and push an update. The quality check will re-run automatically.
+
+---
+*Automated review by [AI Contribution Quality Filter](https://github.com/Noorislam-XD/AI-Contribution-Quality-Filter)*`;
+}
+function buildApproveBody(result) {
+  const { qualityScore, summary } = result;
+  const scoreBar = buildBar(qualityScore);
+  return `## \u2705 Quality Check Passed
+
+This PR scored **${qualityScore}/100** and no AI-generated code was detected.
+
+\`${scoreBar}\` **${qualityScore}/100**
+
+${summary.hasTests ? "\u2705 Tests detected" : ""}
+${summary.languagesDetected.length > 0 ? `\u{1F4DD} Languages: ${summary.languagesDetected.join(", ")}` : ""}
+
+---
+*Automated review by [AI Contribution Quality Filter](https://github.com/Noorislam-XD/AI-Contribution-Quality-Filter)*`;
+}
+function buildAutoCloseComment(result, threshold) {
+  const { qualityScore, aiDetected, aiConfidence, prAuthor } = result;
+  return `## \u{1F6AB} Pull Request Closed \u2014 Quality Too Low
+
+Hi @${prAuthor}, this PR has been automatically closed because the quality score (**${qualityScore}/100**) is below the auto-close threshold of **${threshold}/100**.
+
+${aiDetected ? `AI-generated code was detected with **${Math.round(aiConfidence * 100)}% confidence**. ` : ""}This repository requires genuine, well-written contributions.
+
+**To re-open this PR:**
+1. Review the full quality report in the comment above
+2. Significantly improve the code quality \u2014 refactor, add tests, fix naming, add error handling
+3. Open a new PR with the improved changes
+
+---
+*Automated by [AI Contribution Quality Filter](https://github.com/Noorislam-XD/AI-Contribution-Quality-Filter)*`;
+}
+function buildBar(score) {
+  const filled = Math.round(score / 5);
+  const empty = 20 - filled;
+  return `${"\u2588".repeat(filled)}${"\u2591".repeat(empty)}`;
+}
+
 // src/main.ts
 async function run() {
   try {
     const config = readConfig();
-    const token = core3.getInput("github-token", { required: true });
+    const token = core4.getInput("github-token", { required: true });
     const octokit = github2.getOctokit(token);
     const ctx = github2.context;
     if (!ctx.payload.pull_request) {
-      core3.warning("This action only runs on pull_request events. Skipping.");
+      core4.warning("This action only runs on pull_request events. Skipping.");
       return;
     }
     const prNumber = ctx.payload.pull_request.number;
@@ -26568,12 +26724,12 @@ async function run() {
     const prAuthor = ctx.payload.pull_request.user.login;
     const repoOwner = ctx.repo.owner;
     const repoName = ctx.repo.repo;
-    core3.info(`Analyzing PR #${prNumber}: "${prTitle}" by @${prAuthor}`);
-    core3.info(`Repo: ${repoOwner}/${repoName}`);
+    core4.info(`Analyzing PR #${prNumber}: "${prTitle}" by @${prAuthor}`);
+    core4.info(`Repo: ${repoOwner}/${repoName}`);
     if (config.llmProvider) {
-      core3.info(`LLM analysis enabled: ${config.llmProvider} / ${config.llmModel}`);
+      core4.info(`LLM analysis enabled: ${config.llmProvider} / ${config.llmModel}`);
     } else {
-      core3.info("LLM analysis: disabled (no API key \u2014 using heuristics only)");
+      core4.info("LLM analysis: disabled (no API key \u2014 using heuristics only)");
     }
     const { data: prFiles } = await octokit.rest.pulls.listFiles({
       owner: repoOwner,
@@ -26585,12 +26741,12 @@ async function run() {
       (f) => isAnalyzableFile(f.filename) && !isExcluded(f.filename, config.excludePaths) && f.patch !== void 0
     );
     const filesToAnalyze = eligibleFiles.slice(0, config.maxFilesAnalyzed);
-    core3.info(
+    core4.info(
       `Found ${prFiles.length} files in PR. Analyzing ${filesToAnalyze.length} eligible files.`
     );
     const fileAnalyses = [];
     for (const file of filesToAnalyze) {
-      core3.info(`  \u2192 Heuristic: ${file.filename}`);
+      core4.info(`  \u2192 Heuristic: ${file.filename}`);
       const patch = file.patch ?? "";
       const addedLines = patch.split("\n").filter((l) => l.startsWith("+") && !l.startsWith("+++"));
       const removedLines = patch.split("\n").filter((l) => l.startsWith("-") && !l.startsWith("---"));
@@ -26637,8 +26793,8 @@ async function run() {
         const blended = blendScores(heuristicAiConfidence, heuristicScore, llmAnalysis);
         finalScore = blended.qualityScore;
         finalAiConfidence = blended.aiConfidence;
-        core3.info(`  Blended score: heuristic=${heuristicScore} + LLM=${llmAnalysis.quality_score} \u2192 ${finalScore}`);
-        core3.info(`  Blended AI confidence: ${Math.round(heuristicAiConfidence * 100)}% + ${Math.round(llmAnalysis.ai_probability * 100)}% \u2192 ${Math.round(finalAiConfidence * 100)}%`);
+        core4.info(`  Blended score: heuristic=${heuristicScore} + LLM=${llmAnalysis.quality_score} \u2192 ${finalScore}`);
+        core4.info(`  Blended AI confidence: ${Math.round(heuristicAiConfidence * 100)}% + ${Math.round(llmAnalysis.ai_probability * 100)}% \u2192 ${Math.round(finalAiConfidence * 100)}%`);
       }
     }
     const aiDetected = finalAiConfidence >= config.aiDetectionThreshold;
@@ -26661,27 +26817,44 @@ async function run() {
       passed,
       timestamp: (/* @__PURE__ */ new Date()).toISOString()
     };
-    core3.info(`
+    core4.info(`
 \u{1F4CA} Analysis complete:`);
-    core3.info(`   Quality Score: ${finalScore}/100`);
-    core3.info(`   AI Detected: ${aiDetected} (${Math.round(finalAiConfidence * 100)}%)`);
-    core3.info(`   Passed: ${passed} (threshold: ${config.minQualityScore})`);
-    core3.setOutput("quality-score", String(finalScore));
-    core3.setOutput("ai-detected", String(aiDetected));
-    core3.setOutput("ai-confidence", String(finalAiConfidence.toFixed(3)));
-    core3.setOutput("files-analyzed", String(fileAnalyses.length));
-    core3.setOutput("passed", String(passed));
+    core4.info(`   Quality Score: ${finalScore}/100`);
+    core4.info(`   AI Detected: ${aiDetected} (${Math.round(finalAiConfidence * 100)}%)`);
+    core4.info(`   Passed: ${passed} (threshold: ${config.minQualityScore})`);
+    core4.setOutput("quality-score", String(finalScore));
+    core4.setOutput("ai-detected", String(aiDetected));
+    core4.setOutput("ai-confidence", String(finalAiConfidence.toFixed(3)));
+    core4.setOutput("files-analyzed", String(fileAnalyses.length));
+    core4.setOutput("passed", String(passed));
     if (config.commentOnPr) {
       await postOrUpdateComment(octokit, repoOwner, repoName, prNumber, result, config.minQualityScore);
     }
     if (config.labelPr) {
       await manageLabels(octokit, repoOwner, repoName, prNumber, result, config);
     }
+    const hasReviewAction = config.requestChangesOnLowQuality || config.autoApproveOnPass || config.autoCloseOnLowQuality;
+    if (hasReviewAction) {
+      try {
+        await submitReview(octokit, result, {
+          requestChangesOnLowQuality: config.requestChangesOnLowQuality,
+          requestChangesThreshold: config.requestChangesThreshold,
+          autoApproveOnPass: config.autoApproveOnPass,
+          autoCloseOnLowQuality: config.autoCloseOnLowQuality,
+          autoCloseThreshold: config.autoCloseThreshold,
+          autoCloseComment: config.autoCloseComment
+        });
+      } catch (e) {
+        core4.warning(
+          `Automated review failed: ${e.message}. Make sure the workflow has "pull-requests: write" permission.`
+        );
+      }
+    }
     if (config.trackHistory) {
       try {
         await saveScoreHistory(octokit, result, config.historyBranch);
       } catch (e) {
-        core3.warning(
+        core4.warning(
           `Could not save score history: ${e.message}. Make sure the workflow has "contents: write" permission and the branch "${config.historyBranch}" exists.`
         );
       }
@@ -26689,56 +26862,65 @@ async function run() {
     await writeWorkflowSummary(result, null).catch(() => {
     });
     if (!passed && config.failOnLowQuality) {
-      core3.setFailed(
+      core4.setFailed(
         `PR quality score ${finalScore}/100 is below the required threshold of ${config.minQualityScore}/100.`
       );
     } else if (!passed) {
-      core3.warning(
+      core4.warning(
         `PR quality score ${finalScore}/100 is below the threshold of ${config.minQualityScore}/100.`
       );
     } else {
-      core3.info(`\u2705 PR passed quality check with score ${finalScore}/100.`);
+      core4.info(`\u2705 PR passed quality check with score ${finalScore}/100.`);
     }
   } catch (error) {
     if (error instanceof Error) {
-      core3.setFailed(`Action failed: ${error.message}`);
+      core4.setFailed(`Action failed: ${error.message}`);
     } else {
-      core3.setFailed("An unknown error occurred.");
+      core4.setFailed("An unknown error occurred.");
     }
   }
 }
 function readConfig() {
-  const openaiKey = core3.getInput("openai-api-key") || null;
-  const anthropicKey = core3.getInput("anthropic-api-key") || null;
+  const openaiKey = core4.getInput("openai-api-key") || null;
+  const anthropicKey = core4.getInput("anthropic-api-key") || null;
   let llmProvider = null;
   let llmApiKey = null;
   let llmModel = "";
   if (openaiKey) {
     llmProvider = "openai";
     llmApiKey = openaiKey;
-    llmModel = core3.getInput("llm-model") || "gpt-4o-mini";
+    llmModel = core4.getInput("llm-model") || "gpt-4o-mini";
   } else if (anthropicKey) {
     llmProvider = "anthropic";
     llmApiKey = anthropicKey;
-    llmModel = core3.getInput("llm-model") || "claude-3-haiku-20240307";
+    llmModel = core4.getInput("llm-model") || "claude-3-haiku-20240307";
   }
   const defaultBranch = github2.context.payload.repository?.default_branch ?? "main";
   return {
-    minQualityScore: parseInt(core3.getInput("min-quality-score") || "50", 10),
-    aiDetectionThreshold: parseFloat(core3.getInput("ai-detection-threshold") || "0.65"),
-    failOnLowQuality: core3.getInput("fail-on-low-quality") === "true",
-    commentOnPr: core3.getInput("comment-on-pr") !== "false",
-    labelPr: core3.getInput("label-pr") !== "false",
-    aiGeneratedLabel: core3.getInput("ai-generated-label") || "ai-generated",
-    lowQualityLabel: core3.getInput("low-quality-label") || "needs-improvement",
-    highQualityLabel: core3.getInput("high-quality-label") || "quality-verified",
-    maxFilesAnalyzed: parseInt(core3.getInput("max-files-analyzed") || "50", 10),
-    excludePaths: (core3.getInput("exclude-paths") || "*.md,*.lock,dist/**,build/**,*.min.js,*.min.css").split(",").map((p) => p.trim()).filter(Boolean),
+    minQualityScore: parseInt(core4.getInput("min-quality-score") || "50", 10),
+    aiDetectionThreshold: parseFloat(core4.getInput("ai-detection-threshold") || "0.65"),
+    failOnLowQuality: core4.getInput("fail-on-low-quality") === "true",
+    commentOnPr: core4.getInput("comment-on-pr") !== "false",
+    labelPr: core4.getInput("label-pr") !== "false",
+    aiGeneratedLabel: core4.getInput("ai-generated-label") || "ai-generated",
+    lowQualityLabel: core4.getInput("low-quality-label") || "needs-improvement",
+    highQualityLabel: core4.getInput("high-quality-label") || "quality-verified",
+    maxFilesAnalyzed: parseInt(core4.getInput("max-files-analyzed") || "50", 10),
+    excludePaths: (core4.getInput("exclude-paths") || "*.md,*.lock,dist/**,build/**,*.min.js,*.min.css").split(",").map((p) => p.trim()).filter(Boolean),
     llmProvider,
     llmApiKey,
     llmModel,
-    trackHistory: core3.getInput("track-history") !== "false",
-    historyBranch: core3.getInput("history-branch") || defaultBranch
+    trackHistory: core4.getInput("track-history") !== "false",
+    historyBranch: core4.getInput("history-branch") || defaultBranch,
+    requestChangesOnLowQuality: core4.getInput("request-changes-on-low-quality") === "true",
+    requestChangesThreshold: parseInt(
+      core4.getInput("request-changes-threshold") || core4.getInput("min-quality-score") || "50",
+      10
+    ),
+    autoApproveOnPass: core4.getInput("auto-approve-on-pass") === "true",
+    autoCloseOnLowQuality: core4.getInput("auto-close-on-low-quality") === "true",
+    autoCloseThreshold: parseInt(core4.getInput("auto-close-threshold") || "20", 10),
+    autoCloseComment: core4.getInput("auto-close-comment") || ""
   };
 }
 function isExcluded(filename, patterns) {
@@ -26799,10 +26981,10 @@ async function postOrUpdateComment(octokit, owner, repo, prNumber, result, minSc
   const existing = comments.find((c) => c.body?.includes(marker));
   if (existing) {
     await octokit.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
-    core3.info("Updated existing quality report comment.");
+    core4.info("Updated existing quality report comment.");
   } else {
     await octokit.rest.issues.createComment({ owner, repo, issue_number: prNumber, body });
-    core3.info("Posted quality report comment.");
+    core4.info("Posted quality report comment.");
   }
 }
 async function manageLabels(octokit, owner, repo, prNumber, result, config) {
@@ -26824,9 +27006,9 @@ async function manageLabels(octokit, owner, repo, prNumber, result, config) {
     try {
       await ensureLabelExists(octokit, owner, repo, label);
       await octokit.rest.issues.addLabels({ owner, repo, issue_number: prNumber, labels: [label] });
-      core3.info(`Added label: "${label}"`);
+      core4.info(`Added label: "${label}"`);
     } catch (e) {
-      core3.warning(`Could not add label "${label}": ${e.message}`);
+      core4.warning(`Could not add label "${label}": ${e.message}`);
     }
   }
   const { data: currentLabels } = await octokit.rest.issues.listLabelsOnIssue({
@@ -26838,9 +27020,9 @@ async function manageLabels(octokit, owner, repo, prNumber, result, config) {
     if (currentLabels.some((l) => l.name === label)) {
       try {
         await octokit.rest.issues.removeLabel({ owner, repo, issue_number: prNumber, name: label });
-        core3.info(`Removed label: "${label}"`);
+        core4.info(`Removed label: "${label}"`);
       } catch (e) {
-        core3.warning(`Could not remove label "${label}": ${e.message}`);
+        core4.warning(`Could not remove label "${label}": ${e.message}`);
       }
     }
   }

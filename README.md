@@ -10,8 +10,10 @@ Open source maintainers are increasingly overwhelmed by AI-generated PR spam —
 - **Score code quality** (0–100) across every changed file
 - **Post visual reports** directly on pull requests
 - **Label PRs automatically** (`ai-generated`, `needs-improvement`, `quality-verified`)
-- **Track quality over time** — per-repo score history with README badge
-- **Optionally block merges** when quality falls below your threshold
+- **Request changes or approve** automatically based on score
+- **Auto-close** extremely low-quality PRs with an explanation
+- **Track quality over time** — per-repo score history with live README badge
+- **Optionally block merges** via `fail-on-low-quality` or branch protection rules
 
 ---
 
@@ -49,116 +51,174 @@ jobs:
 
 For significantly more accurate detection, provide an OpenAI or Anthropic API key. The action sends the diff to the LLM for semantic review and blends results (65% LLM / 35% heuristic).
 
-### With OpenAI
-
 ```yaml
 - uses: Noorislam-XD/AI-Contribution-Quality-Filter@v1
   with:
     github-token: ${{ secrets.GITHUB_TOKEN }}
     openai-api-key: ${{ secrets.OPENAI_API_KEY }}   # Settings → Secrets → Actions
+    # anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}  # alternative
     # llm-model: gpt-4o   # optional upgrade (default: gpt-4o-mini)
 ```
 
-### With Anthropic (Claude)
+If the LLM call fails, the action silently falls back to heuristics — your CI never breaks.
+
+---
+
+## 🔴 Automated Review Actions
+
+The action can take automated actions on GitHub reviews — all are disabled by default and must be explicitly opted in.
+
+### Request Changes (blocks merge)
+
+When enabled, the action submits a "Request changes" GitHub review on low-quality PRs. This blocks the merge button until the review is dismissed or the PR is updated and re-analyzed.
 
 ```yaml
 - uses: Noorislam-XD/AI-Contribution-Quality-Filter@v1
   with:
     github-token: ${{ secrets.GITHUB_TOKEN }}
-    anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
-    # llm-model: claude-3-5-sonnet-20241022   # optional upgrade
+    request-changes-on-low-quality: true
+    request-changes-threshold: 60   # optional, defaults to min-quality-score
 ```
 
-If the LLM call fails for any reason the action silently falls back to heuristics — your CI never breaks.
+**How it works:**
+- When a PR scores below the threshold → "Request changes" review is submitted with a score breakdown and improvement suggestions
+- When the contributor pushes a fix and the PR is re-analyzed → previous review is automatically dismissed before the new one is posted
+- The review comment includes the score bar, top issues, AI signals, and LLM suggestions (if LLM mode is on)
+
+### Auto-Approve (optional, for trusted setups)
+
+Automatically approve PRs that pass the quality threshold with no AI detected:
+
+```yaml
+auto-approve-on-pass: true
+```
+
+> Only enable this if you're using branch protection with "Required reviewers" and want this action to count as a reviewer for basic quality gating.
+
+### Auto-Close (hard rejection)
+
+Automatically close PRs that score below a very low threshold. A comment is posted explaining why and how to re-open:
+
+```yaml
+auto-close-on-low-quality: true
+auto-close-threshold: 20       # only closes truly terrible PRs
+# auto-close-comment: "..."    # optional custom message
+```
 
 ---
 
 ## 📈 Score History & README Badge
 
-When `track-history: true` (the default), every PR analysis is saved to `.github/quality-scores.json` in your repo, and `.github/quality-badge.json` is updated automatically. This powers a live README badge showing your repo's average quality score.
-
-### Add the badge to your README
+Every PR analysis is saved to `.github/quality-scores.json` and `.github/quality-badge.json` is updated automatically. Add this to your README for a live score badge:
 
 ```markdown
 ![Quality Score](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/.github/quality-badge.json)
 ```
 
-Replace `YOUR_USERNAME`, `YOUR_REPO`, and `main` with your values.
-
-### What the badge shows
-
-The badge color reflects your repository's average score across all analyzed PRs:
-
-| Average Score | Color |
-|--------------|-------|
+| Average Score | Badge Color |
+|--------------|-------------|
 | 80–100 | 🟢 Bright green |
 | 65–79 | 🟢 Green |
 | 50–64 | 🟡 Yellow |
 | 30–49 | 🟠 Orange |
 | 0–29 | 🔴 Red |
 
-### Score history file format
+---
 
-`.github/quality-scores.json` stores up to 200 entries:
-
-```json
-{
-  "repo": "owner/repo",
-  "lastUpdated": "2025-05-05T12:00:00.000Z",
-  "averageScore": 74,
-  "totalPrsAnalyzed": 47,
-  "entries": [
-    {
-      "prNumber": 42,
-      "prTitle": "Add user authentication",
-      "prAuthor": "contributor",
-      "qualityScore": 81,
-      "aiConfidence": 0.12,
-      "aiDetected": false,
-      "passed": true,
-      "filesAnalyzed": 6,
-      "linesAdded": 312,
-      "sha": "a3f9c2b",
-      "branch": "feat/auth",
-      "timestamp": "2025-05-05T12:00:00.000Z"
-    }
-  ]
-}
-```
-
-### Required permission
-
-History tracking commits files to the repo, so add `contents: write` to your workflow permissions:
+## Full Configuration Example
 
 ```yaml
-permissions:
-  pull-requests: write
-  issues: write
-  contents: write   # ← required for track-history
+- uses: Noorislam-XD/AI-Contribution-Quality-Filter@v1
+  with:
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+
+    # LLM (optional)
+    openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+    # llm-model: gpt-4o
+
+    # Scoring
+    min-quality-score: 60
+    ai-detection-threshold: 0.60
+    fail-on-low-quality: true       # fails the CI check
+
+    # PR decoration
+    comment-on-pr: true
+    label-pr: true
+    ai-generated-label: ai-generated
+    low-quality-label: needs-improvement
+    high-quality-label: quality-verified
+
+    # Automated reviews
+    request-changes-on-low-quality: true    # blocks merge
+    request-changes-threshold: 60
+    auto-approve-on-pass: false
+    auto-close-on-low-quality: true         # hard-reject very bad PRs
+    auto-close-threshold: 20
+
+    # History
+    track-history: true
+    # history-branch: main
+
+    # Performance
+    max-files-analyzed: 50
+    exclude-paths: '*.md,*.lock,dist/**,build/**'
 ```
 
 ---
 
 ## Inputs
 
-| Input | Required | Default | Description |
-|-------|----------|---------|-------------|
-| `github-token` | ✅ | — | Use `${{ secrets.GITHUB_TOKEN }}` |
-| `openai-api-key` | ❌ | `''` | Enables LLM mode with OpenAI (gpt-4o-mini) |
-| `anthropic-api-key` | ❌ | `''` | Enables LLM mode with Anthropic Claude |
-| `llm-model` | ❌ | `''` | Override LLM model (e.g. `gpt-4o`, `claude-3-5-sonnet-20241022`) |
-| `min-quality-score` | ❌ | `50` | Minimum score (0–100) to pass |
-| `ai-detection-threshold` | ❌ | `0.65` | Confidence threshold for AI detection |
-| `fail-on-low-quality` | ❌ | `false` | Fail the workflow if score is below threshold |
-| `comment-on-pr` | ❌ | `true` | Post a quality report comment on the PR |
-| `label-pr` | ❌ | `true` | Apply labels based on result |
-| `ai-generated-label` | ❌ | `ai-generated` | Label for detected AI code |
-| `low-quality-label` | ❌ | `needs-improvement` | Label for below-threshold PRs |
-| `high-quality-label` | ❌ | `quality-verified` | Label for passing PRs |
-| `track-history` | ❌ | `true` | Save scores to `.github/quality-scores.json` |
-| `history-branch` | ❌ | default branch | Branch where history files are written |
-| `max-files-analyzed` | ❌ | `50` | Max files per PR |
-| `exclude-paths` | ❌ | `*.md,*.lock,...` | Glob patterns to skip |
+### Core
+
+| Input | Default | Description |
+|-------|---------|-------------|
+| `github-token` | required | Use `${{ secrets.GITHUB_TOKEN }}` |
+| `min-quality-score` | `50` | Minimum score to pass (0–100) |
+| `ai-detection-threshold` | `0.65` | Confidence for AI detection (0–1) |
+| `fail-on-low-quality` | `false` | Fail the CI check if score is below threshold |
+
+### LLM
+
+| Input | Default | Description |
+|-------|---------|-------------|
+| `openai-api-key` | `''` | Enables LLM mode (OpenAI) |
+| `anthropic-api-key` | `''` | Enables LLM mode (Anthropic) — used if no OpenAI key |
+| `llm-model` | `''` | Override model (e.g. `gpt-4o`, `claude-3-5-sonnet-20241022`) |
+
+### Automated Reviews
+
+| Input | Default | Description |
+|-------|---------|-------------|
+| `request-changes-on-low-quality` | `false` | Submit "Request changes" review below threshold |
+| `request-changes-threshold` | `min-quality-score` | Score threshold for requesting changes |
+| `auto-approve-on-pass` | `false` | Auto-approve passing PRs with no AI detected |
+| `auto-close-on-low-quality` | `false` | Close PRs below `auto-close-threshold` |
+| `auto-close-threshold` | `20` | Score threshold for auto-closing |
+| `auto-close-comment` | `''` | Custom message when auto-closing (leave empty for default) |
+
+### PR Decoration
+
+| Input | Default | Description |
+|-------|---------|-------------|
+| `comment-on-pr` | `true` | Post quality report comment |
+| `label-pr` | `true` | Apply labels based on result |
+| `ai-generated-label` | `ai-generated` | Label for AI code |
+| `low-quality-label` | `needs-improvement` | Label for failing PRs |
+| `high-quality-label` | `quality-verified` | Label for passing PRs |
+
+### History & Badge
+
+| Input | Default | Description |
+|-------|---------|-------------|
+| `track-history` | `true` | Save scores to `.github/quality-scores.json` |
+| `history-branch` | default branch | Branch where history files are written |
+
+### Performance
+
+| Input | Default | Description |
+|-------|---------|-------------|
+| `max-files-analyzed` | `50` | Max files per PR |
+| `exclude-paths` | `*.md,*.lock,...` | Comma-separated glob patterns to skip |
 
 ---
 
@@ -172,24 +232,26 @@ permissions:
 | `files-analyzed` | Number of files analyzed |
 | `passed` | `"true"` if the PR passed the quality threshold |
 
-```yaml
-- id: quality
-  uses: Noorislam-XD/AI-Contribution-Quality-Filter@v1
-  with:
-    github-token: ${{ secrets.GITHUB_TOKEN }}
+---
 
-- run: echo "Score = ${{ steps.quality.outputs.quality-score }}"
+## Required Permissions
+
+```yaml
+permissions:
+  pull-requests: write   # post comments, submit reviews, auto-close
+  issues: write          # manage labels
+  contents: write        # score history (use "read" if track-history: false)
 ```
 
 ---
 
 ## How Quality Is Scored
 
-Base score 100, deductions per file weighted by lines changed. LLM and heuristic scores are blended in LLM mode.
+Base score 100, deductions applied per file, weighted by lines changed. LLM and heuristic scores are blended in LLM mode.
 
 | Signal | Max Deduction |
 |--------|--------------|
-| AI-generated code detected | −30 pts |
+| AI code detected | −30 pts |
 | Very large diff (>500 lines) | −15 pts |
 | No error handling | −8 pts |
 | Code duplication | −15 pts |
@@ -211,51 +273,15 @@ Base score 100, deductions per file weighted by lines changed. LLM and heuristic
 | **Repetitive structures** | Near-identical blocks in the diff |
 | **Excessive docstrings** | Auto-generated `@param`/`@returns` for every arg |
 
-### LLM reasoning (optional)
+### LLM reasoning (optional, requires API key)
 
-When an API key is provided, the model reads the actual diff and evaluates writing style, naming choices, structural patterns, missing validation, security antipatterns, and logical quality — things static analysis misses.
-
----
-
-## Strict Mode Example
-
-```yaml
-- uses: Noorislam-XD/AI-Contribution-Quality-Filter@v1
-  with:
-    github-token: ${{ secrets.GITHUB_TOKEN }}
-    openai-api-key: ${{ secrets.OPENAI_API_KEY }}
-    min-quality-score: 70
-    ai-detection-threshold: 0.55
-    fail-on-low-quality: true   # fails the check, blocks merge
-    track-history: true
-```
-
----
-
-## Labels Created Automatically
-
-| Label | Color | Meaning |
-|-------|-------|---------|
-| `ai-generated` | 🟡 Yellow | AI code patterns detected |
-| `needs-improvement` | 🔴 Red | Score below threshold |
-| `quality-verified` | 🟢 Green | Score passed threshold |
-
----
-
-## Required Permissions
-
-```yaml
-permissions:
-  pull-requests: write   # post comments
-  issues: write          # manage labels
-  contents: write        # score history (use "read" if track-history: false)
-```
+Sends the diff to GPT/Claude, which evaluates writing style, naming, structural patterns, missing validation, security antipatterns, and logical quality — returning AI probability, quality score, and specific improvement suggestions.
 
 ---
 
 ## Rebuilding After Changes
 
-If you modify `action/src/`, rebuild the bundle before committing:
+If you modify `action/src/`, rebuild before committing:
 
 ```bash
 pnpm --filter ai-contribution-quality-filter-action run build
@@ -266,7 +292,7 @@ pnpm --filter ai-contribution-quality-filter-action run build
 
 ## Contributing & Feedback
 
-Issues and PRs welcome. If the action incorrectly flags a contribution, open an issue — it helps improve the detection model.
+Issues and PRs are welcome. If the action incorrectly flags a contribution, open an issue — it helps improve the detection model.
 
 ---
 

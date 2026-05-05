@@ -6,6 +6,7 @@ import { scoreFile, aggregateScore, isAnalyzableFile } from "./scorer.js";
 import { buildPrComment } from "./commenter.js";
 import { runLlmAnalysis, buildCombinedDiff, blendScores } from "./llm-analyzer.js";
 import { saveScoreHistory, writeWorkflowSummary } from "./history.js";
+import { submitReview } from "./reviewer.js";
 import type {
   ActionConfig,
   AnalysisResult,
@@ -174,6 +175,30 @@ async function run(): Promise<void> {
       await manageLabels(octokit, repoOwner, repoName, prNumber, result, config);
     }
 
+    // --- Automated review (request changes / approve / close) ---
+    const hasReviewAction =
+      config.requestChangesOnLowQuality ||
+      config.autoApproveOnPass ||
+      config.autoCloseOnLowQuality;
+
+    if (hasReviewAction) {
+      try {
+        await submitReview(octokit, result, {
+          requestChangesOnLowQuality: config.requestChangesOnLowQuality,
+          requestChangesThreshold: config.requestChangesThreshold,
+          autoApproveOnPass: config.autoApproveOnPass,
+          autoCloseOnLowQuality: config.autoCloseOnLowQuality,
+          autoCloseThreshold: config.autoCloseThreshold,
+          autoCloseComment: config.autoCloseComment,
+        });
+      } catch (e) {
+        core.warning(
+          `Automated review failed: ${(e as Error).message}. ` +
+          `Make sure the workflow has "pull-requests: write" permission.`
+        );
+      }
+    }
+
     // --- Score history tracking ---
     if (config.trackHistory) {
       try {
@@ -251,6 +276,17 @@ function readConfig(): ActionConfig {
     llmModel,
     trackHistory: core.getInput("track-history") !== "false",
     historyBranch: core.getInput("history-branch") || defaultBranch,
+    requestChangesOnLowQuality: core.getInput("request-changes-on-low-quality") === "true",
+    requestChangesThreshold: parseInt(
+      core.getInput("request-changes-threshold") ||
+        core.getInput("min-quality-score") ||
+        "50",
+      10
+    ),
+    autoApproveOnPass: core.getInput("auto-approve-on-pass") === "true",
+    autoCloseOnLowQuality: core.getInput("auto-close-on-low-quality") === "true",
+    autoCloseThreshold: parseInt(core.getInput("auto-close-threshold") || "20", 10),
+    autoCloseComment: core.getInput("auto-close-comment") || "",
   };
 }
 

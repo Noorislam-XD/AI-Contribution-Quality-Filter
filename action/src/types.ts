@@ -106,4 +106,10 @@ export interface ActionConfig {
   llmModel: string;
   trackHistory: boolean;
   historyBranch: string;
+  requestChangesOnLowQuality: boolean;
+  requestChangesThreshold: number;
+  autoApproveOnPass: boolean;
+  autoCloseOnLowQuality: boolean;
+  autoCloseThreshold: number;
+  autoCloseComment: string;
 }

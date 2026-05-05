@@ -19,23 +19,36 @@ jobs:
         uses: Noorislam-XD/AI-Contribution-Quality-Filter@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          # ── Optional: enable LLM-enhanced detection ──
+
+          # ── Optional: LLM-enhanced detection ──────────────────────────────────
           # openai-api-key: ${{ secrets.OPENAI_API_KEY }}
           # anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
-          # ── Scoring ──
+          # llm-model: gpt-4o-mini
+
+          # ── Scoring ───────────────────────────────────────────────────────────
           min-quality-score: 50
           ai-detection-threshold: 0.65
           fail-on-low-quality: false
-          # ── PR actions ──
+
+          # ── PR comments & labels ──────────────────────────────────────────────
           comment-on-pr: true
           label-pr: true
           ai-generated-label: ai-generated
           low-quality-label: needs-improvement
           high-quality-label: quality-verified
-          # ── History tracking ──
+
+          # ── Automated reviews ─────────────────────────────────────────────────
+          request-changes-on-low-quality: false   # set true to block merge
+          # request-changes-threshold: 50          # defaults to min-quality-score
+          auto-approve-on-pass: false             # set true to auto-approve good PRs
+          auto-close-on-low-quality: false        # set true to hard-reject very bad PRs
+          # auto-close-threshold: 20              # score below which PRs are closed
+
+          # ── History & badge ───────────────────────────────────────────────────
           track-history: true
-          # history-branch: main   # defaults to repo default branch
-          # ── Performance ──
+          # history-branch: main
+
+          # ── Performance ───────────────────────────────────────────────────────
           max-files-analyzed: 50
           exclude-paths: '*.md,*.lock,dist/**,build/**,*.min.js,*.min.css,package-lock.json,pnpm-lock.yaml,yarn.lock'
 
