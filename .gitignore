@@ -1,10 +1,15 @@
 # See https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
 
 # compiled output
-dist
 tmp
 out-tsc
 *.tsbuildinfo
+
+# Ignore dist for most packages, but NOT dist/index.js at the root
+# (the GitHub Action bundle must be committed)
+artifacts/*/dist
+lib/*/dist
+action/dist
 .expo
 .expo-shared
 

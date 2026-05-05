@@ -1,0 +1,68 @@
+name: 'AI Contribution Quality Filter'
+description: 'Detects AI-generated code in pull requests and scores code quality (0-100) to help maintainers filter low-quality contributions.'
+author: 'Noorislam-XD'
+
+branding:
+  icon: 'shield'
+  color: 'purple'
+
+inputs:
+  github-token:
+    description: 'GitHub token for API access (use ${{ secrets.GITHUB_TOKEN }})'
+    required: true
+  min-quality-score:
+    description: 'Minimum quality score (0-100) required to pass. PRs below this score are flagged.'
+    required: false
+    default: '50'
+  ai-detection-threshold:
+    description: 'Confidence threshold (0-1) for classifying code as AI-generated.'
+    required: false
+    default: '0.65'
+  fail-on-low-quality:
+    description: 'Fail the workflow if quality score is below min-quality-score.'
+    required: false
+    default: 'false'
+  comment-on-pr:
+    description: 'Post a detailed quality report comment on the pull request.'
+    required: false
+    default: 'true'
+  label-pr:
+    description: 'Add labels to the pull request based on analysis results.'
+    required: false
+    default: 'true'
+  ai-generated-label:
+    description: 'Label to apply when AI-generated code is detected.'
+    required: false
+    default: 'ai-generated'
+  low-quality-label:
+    description: 'Label to apply when quality score is below threshold.'
+    required: false
+    default: 'needs-improvement'
+  high-quality-label:
+    description: 'Label to apply when quality score passes threshold.'
+    required: false
+    default: 'quality-verified'
+  max-files-analyzed:
+    description: 'Maximum number of files to analyze per PR (for performance).'
+    required: false
+    default: '50'
+  exclude-paths:
+    description: 'Comma-separated glob patterns to exclude from analysis (e.g. "*.md,dist/**,*.lock").'
+    required: false
+    default: '*.md,*.lock,dist/**,build/**,*.min.js,*.min.css,package-lock.json,pnpm-lock.yaml,yarn.lock'
+
+outputs:
+  quality-score:
+    description: 'Overall quality score from 0 to 100.'
+  ai-detected:
+    description: '"true" if AI-generated code was detected above the threshold, "false" otherwise.'
+  ai-confidence:
+    description: 'AI detection confidence score from 0 to 1.'
+  files-analyzed:
+    description: 'Number of files analyzed in this PR.'
+  passed:
+    description: '"true" if the PR passed the quality threshold, "false" otherwise.'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'

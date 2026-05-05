@@ -1,0 +1,21 @@
+{
+  "name": "ai-contribution-quality-filter-action",
+  "version": "1.0.0",
+  "description": "GitHub Action: Detect AI-generated code and score PR quality",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "dev": "node build.mjs --watch"
+  },
+  "dependencies": {
+    "@actions/core": "^1.11.1",
+    "@actions/github": "^6.0.0",
+    "minimatch": "^10.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.3",
+    "esbuild": "^0.25.3",
+    "typescript": "^5.8.3"
+  }
+}

@@ -1,0 +1,30 @@
+name: AI Contribution Quality Filter
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+  issues: write
+  contents: read
+
+jobs:
+  quality-filter:
+    name: Analyze PR Quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run AI Contribution Quality Filter
+        uses: Noorislam-XD/AI-Contribution-Quality-Filter@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          min-quality-score: 50
+          ai-detection-threshold: 0.65
+          fail-on-low-quality: false
+          comment-on-pr: true
+          label-pr: true
+          ai-generated-label: ai-generated
+          low-quality-label: needs-improvement
+          high-quality-label: quality-verified
+          max-files-analyzed: 50
+          exclude-paths: '*.md,*.lock,dist/**,build/**,*.min.js,*.min.css,package-lock.json,pnpm-lock.yaml,yarn.lock'

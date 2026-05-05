@@ -1,0 +1,34 @@
+name: Strict AI Quality Gate
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+  issues: write
+  contents: read
+
+jobs:
+  quality-gate:
+    name: Quality Gate (Strict)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run AI Contribution Quality Filter
+        id: quality
+        uses: Noorislam-XD/AI-Contribution-Quality-Filter@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          min-quality-score: 70
+          ai-detection-threshold: 0.55
+          fail-on-low-quality: true
+          comment-on-pr: true
+          label-pr: true
+
+      - name: Print results
+        run: |
+          echo "Quality Score: ${{ steps.quality.outputs.quality-score }}"
+          echo "AI Detected: ${{ steps.quality.outputs.ai-detected }}"
+          echo "AI Confidence: ${{ steps.quality.outputs.ai-confidence }}"
+          echo "Files Analyzed: ${{ steps.quality.outputs.files-analyzed }}"
+          echo "Passed: ${{ steps.quality.outputs.passed }}"
