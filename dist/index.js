@@ -19674,7 +19674,7 @@ var require_core = __commonJS({
       process.env["PATH"] = `${inputPath}${path2.delimiter}${process.env["PATH"]}`;
     }
     exports2.addPath = addPath;
-    function getInput2(name, options) {
+    function getInput3(name, options) {
       const val = process.env[`INPUT_${name.replace(/ /g, "_").toUpperCase()}`] || "";
       if (options && options.required && !val) {
         throw new Error(`Input required and not supplied: ${name}`);
@@ -19684,9 +19684,9 @@ var require_core = __commonJS({
       }
       return val.trim();
     }
-    exports2.getInput = getInput2;
+    exports2.getInput = getInput3;
     function getMultilineInput(name, options) {
-      const inputs = getInput2(name, options).split("\n").filter((x) => x !== "");
+      const inputs = getInput3(name, options).split("\n").filter((x) => x !== "");
       if (options && options.trimWhitespace === false) {
         return inputs;
       }
@@ -19696,7 +19696,7 @@ var require_core = __commonJS({
     function getBooleanInput(name, options) {
       const trueValue = ["true", "True", "TRUE"];
       const falseValue = ["false", "False", "FALSE"];
-      const val = getInput2(name, options);
+      const val = getInput3(name, options);
       if (trueValue.includes(val))
         return true;
       if (falseValue.includes(val))
@@ -23878,7 +23878,7 @@ var require_github = __commonJS({
 });
 
 // src/main.ts
-var core4 = __toESM(require_core(), 1);
+var core5 = __toESM(require_core(), 1);
 var github2 = __toESM(require_github(), 1);
 
 // ../node_modules/.pnpm/balanced-match@4.0.4/node_modules/balanced-match/dist/esm/index.js
@@ -26708,15 +26708,118 @@ function buildBar(score) {
   return `${"\u2588".repeat(filled)}${"\u2591".repeat(empty)}`;
 }
 
+// src/allowlist.ts
+var core4 = __toESM(require_core(), 1);
+var GITHUB_BOTS = /* @__PURE__ */ new Set([
+  "dependabot[bot]",
+  "dependabot-preview[bot]",
+  "renovate[bot]",
+  "github-actions[bot]",
+  "snyk-bot",
+  "greenkeeper[bot]",
+  "renovate-approve",
+  "allcontributors[bot]",
+  "imgbot[bot]",
+  "pre-commit-ci[bot]",
+  "semantic-release-bot",
+  "mergify[bot]",
+  "stale[bot]",
+  "netlify[bot]",
+  "vercel[bot]",
+  "codecov[bot]",
+  "sonarcloud[bot]"
+]);
+async function checkContributor(author, octokit, config) {
+  if (matchesPatternList(author, config.blockedContributors)) {
+    return {
+      status: "blocked",
+      reason: `@${author} is on the contributor blocklist`
+    };
+  }
+  if (matchesPatternList(author, config.trustedContributors)) {
+    return {
+      status: "trusted",
+      reason: `@${author} is on the trusted contributors list`
+    };
+  }
+  if (config.trustBots && isBot(author)) {
+    return {
+      status: "trusted",
+      reason: `@${author} is a trusted GitHub automation bot`
+    };
+  }
+  if (config.trustedOrg) {
+    const isMember = await checkOrgMembership(octokit, author, config.trustedOrg);
+    if (isMember) {
+      return {
+        status: "trusted",
+        reason: `@${author} is a member of the trusted organization @${config.trustedOrg}`
+      };
+    }
+  }
+  return { status: "normal", reason: "" };
+}
+function matchesPatternList(username, patterns) {
+  const lowerUser = username.toLowerCase();
+  for (const pattern of patterns) {
+    const lower = pattern.trim().toLowerCase();
+    if (!lower) continue;
+    if (lower.endsWith("*")) {
+      const prefix = lower.slice(0, -1);
+      if (lowerUser.startsWith(prefix)) return true;
+    } else {
+      if (lowerUser === lower) return true;
+    }
+  }
+  return false;
+}
+function isBot(username) {
+  return GITHUB_BOTS.has(username) || username.endsWith("[bot]");
+}
+async function checkOrgMembership(octokit, username, org) {
+  try {
+    const { status } = await octokit.rest.orgs.checkMembershipForUser({
+      org,
+      username
+    });
+    return status === 204;
+  } catch {
+    return false;
+  }
+}
+function buildTrustedComment(author, reason) {
+  return `## \u2705 Trusted Contributor \u2014 Quality Check Skipped
+
+@${author} is recognized as a trusted contributor (${reason.replace(`@${author} is `, "")}).
+
+The detailed AI detection and quality scoring analysis has been skipped for this PR.
+
+---
+*Automated by [AI Contribution Quality Filter](https://github.com/Noorislam-XD/AI-Contribution-Quality-Filter)*`;
+}
+function buildBlockedComment(author, reason, qualityScore, isAnalysisSkipped) {
+  const analysisNote = isAnalysisSkipped ? "This PR has been automatically failed without detailed analysis." : `The PR was analyzed and scored **${qualityScore}/100**, but the blocklist override applies.`;
+  return `## \u{1F6AB} Blocked Contributor
+
+@${author} is on this repository's contributor blocklist.
+
+${analysisNote}
+
+If you believe this is a mistake, please contact the repository maintainers directly.
+
+---
+*Automated by [AI Contribution Quality Filter](https://github.com/Noorislam-XD/AI-Contribution-Quality-Filter)*`;
+}
+
 // src/main.ts
 async function run() {
   try {
     const config = readConfig();
-    const token = core4.getInput("github-token", { required: true });
+    const token = core5.getInput("github-token", { required: true });
     const octokit = github2.getOctokit(token);
     const ctx = github2.context;
     if (!ctx.payload.pull_request) {
-      core4.warning("This action only runs on pull_request events. Skipping.");
+      core5.warning("This action only runs on pull_request events. Skipping.");
       return;
     }
     const prNumber = ctx.payload.pull_request.number;
@@ -26724,12 +26827,83 @@ async function run() {
     const prAuthor = ctx.payload.pull_request.user.login;
     const repoOwner = ctx.repo.owner;
     const repoName = ctx.repo.repo;
-    core4.info(`Analyzing PR #${prNumber}: "${prTitle}" by @${prAuthor}`);
-    core4.info(`Repo: ${repoOwner}/${repoName}`);
+    core5.info(`Analyzing PR #${prNumber}: "${prTitle}" by @${prAuthor}`);
+    core5.info(`Repo: ${repoOwner}/${repoName}`);
+    const allowlistConfig = {
+      trustedContributors: config.trustedContributors,
+      blockedContributors: config.blockedContributors,
+      trustBots: config.trustBots,
+      trustedOrg: config.trustedOrg,
+      blockedScoreCap: config.blockedScoreCap,
+      skipAnalysisForTrusted: config.skipAnalysisForTrusted
+    };
+    const contributorCheck = await checkContributor(prAuthor, octokit, allowlistConfig);
+    if (contributorCheck.status === "trusted" && config.skipAnalysisForTrusted) {
+      core5.info(`\u2B50 Trusted contributor: ${contributorCheck.reason} \u2014 skipping analysis.`);
+      core5.setOutput("quality-score", "100");
+      core5.setOutput("ai-detected", "false");
+      core5.setOutput("ai-confidence", "0");
+      core5.setOutput("files-analyzed", "0");
+      core5.setOutput("passed", "true");
+      if (config.commentOnPr) {
+        await octokit.rest.issues.createComment({
+          owner: repoOwner,
+          repo: repoName,
+          issue_number: prNumber,
+          body: buildTrustedComment(prAuthor, contributorCheck.reason)
+        });
+      }
+      if (config.labelPr) {
+        try {
+          await octokit.rest.issues.addLabels({
+            owner: repoOwner,
+            repo: repoName,
+            issue_number: prNumber,
+            labels: [config.highQualityLabel]
+          });
+        } catch {
+        }
+      }
+      return;
+    }
+    if (contributorCheck.status === "blocked") {
+      core5.info(`\u{1F6AB} Blocked contributor: ${contributorCheck.reason}`);
+      core5.setOutput("quality-score", String(config.blockedScoreCap));
+      core5.setOutput("ai-detected", "true");
+      core5.setOutput("ai-confidence", "1");
+      core5.setOutput("files-analyzed", "0");
+      core5.setOutput("passed", "false");
+      if (config.commentOnPr) {
+        await octokit.rest.issues.createComment({
+          owner: repoOwner,
+          repo: repoName,
+          issue_number: prNumber,
+          body: buildBlockedComment(prAuthor, contributorCheck.reason, config.blockedScoreCap, true)
+        });
+      }
+      if (config.labelPr) {
+        try {
+          await octokit.rest.issues.addLabels({
+            owner: repoOwner,
+            repo: repoName,
+            issue_number: prNumber,
+            labels: [config.aiGeneratedLabel, config.lowQualityLabel]
+          });
+        } catch {
+        }
+      }
+      if (config.failOnLowQuality) {
+        core5.setFailed(`PR by @${prAuthor} rejected \u2014 contributor is on the blocklist.`);
+      }
+      return;
+    }
+    if (contributorCheck.status === "trusted") {
+      core5.info(`\u2B50 Trusted contributor: ${contributorCheck.reason} \u2014 running analysis with trusted flag.`);
+    }
     if (config.llmProvider) {
-      core4.info(`LLM analysis enabled: ${config.llmProvider} / ${config.llmModel}`);
+      core5.info(`LLM analysis enabled: ${config.llmProvider} / ${config.llmModel}`);
     } else {
-      core4.info("LLM analysis: disabled (no API key \u2014 using heuristics only)");
+      core5.info("LLM analysis: disabled (no API key \u2014 using heuristics only)");
     }
     const { data: prFiles } = await octokit.rest.pulls.listFiles({
       owner: repoOwner,
@@ -26741,12 +26915,12 @@ async function run() {
       (f) => isAnalyzableFile(f.filename) && !isExcluded(f.filename, config.excludePaths) && f.patch !== void 0
     );
     const filesToAnalyze = eligibleFiles.slice(0, config.maxFilesAnalyzed);
-    core4.info(
+    core5.info(
       `Found ${prFiles.length} files in PR. Analyzing ${filesToAnalyze.length} eligible files.`
     );
     const fileAnalyses = [];
     for (const file of filesToAnalyze) {
-      core4.info(`  \u2192 Heuristic: ${file.filename}`);
+      core5.info(`  \u2192 Heuristic: ${file.filename}`);
       const patch = file.patch ?? "";
       const addedLines = patch.split("\n").filter((l) => l.startsWith("+") && !l.startsWith("+++"));
       const removedLines = patch.split("\n").filter((l) => l.startsWith("-") && !l.startsWith("---"));
@@ -26793,8 +26967,8 @@ async function run() {
         const blended = blendScores(heuristicAiConfidence, heuristicScore, llmAnalysis);
         finalScore = blended.qualityScore;
         finalAiConfidence = blended.aiConfidence;
-        core4.info(`  Blended score: heuristic=${heuristicScore} + LLM=${llmAnalysis.quality_score} \u2192 ${finalScore}`);
-        core4.info(`  Blended AI confidence: ${Math.round(heuristicAiConfidence * 100)}% + ${Math.round(llmAnalysis.ai_probability * 100)}% \u2192 ${Math.round(finalAiConfidence * 100)}%`);
+        core5.info(`  Blended score: heuristic=${heuristicScore} + LLM=${llmAnalysis.quality_score} \u2192 ${finalScore}`);
+        core5.info(`  Blended AI confidence: ${Math.round(heuristicAiConfidence * 100)}% + ${Math.round(llmAnalysis.ai_probability * 100)}% \u2192 ${Math.round(finalAiConfidence * 100)}%`);
       }
     }
     const aiDetected = finalAiConfidence >= config.aiDetectionThreshold;
@@ -26817,16 +26991,16 @@ async function run() {
       passed,
       timestamp: (/* @__PURE__ */ new Date()).toISOString()
     };
-    core4.info(`
+    core5.info(`
 \u{1F4CA} Analysis complete:`);
-    core4.info(`   Quality Score: ${finalScore}/100`);
-    core4.info(`   AI Detected: ${aiDetected} (${Math.round(finalAiConfidence * 100)}%)`);
-    core4.info(`   Passed: ${passed} (threshold: ${config.minQualityScore})`);
-    core4.setOutput("quality-score", String(finalScore));
-    core4.setOutput("ai-detected", String(aiDetected));
-    core4.setOutput("ai-confidence", String(finalAiConfidence.toFixed(3)));
-    core4.setOutput("files-analyzed", String(fileAnalyses.length));
-    core4.setOutput("passed", String(passed));
+    core5.info(`   Quality Score: ${finalScore}/100`);
+    core5.info(`   AI Detected: ${aiDetected} (${Math.round(finalAiConfidence * 100)}%)`);
+    core5.info(`   Passed: ${passed} (threshold: ${config.minQualityScore})`);
+    core5.setOutput("quality-score", String(finalScore));
+    core5.setOutput("ai-detected", String(aiDetected));
+    core5.setOutput("ai-confidence", String(finalAiConfidence.toFixed(3)));
+    core5.setOutput("files-analyzed", String(fileAnalyses.length));
+    core5.setOutput("passed", String(passed));
     if (config.commentOnPr) {
       await postOrUpdateComment(octokit, repoOwner, repoName, prNumber, result, config.minQualityScore);
     }
@@ -26845,7 +27019,7 @@ async function run() {
           autoCloseComment: config.autoCloseComment
         });
       } catch (e) {
-        core4.warning(
+        core5.warning(
           `Automated review failed: ${e.message}. Make sure the workflow has "pull-requests: write" permission.`
         );
       }
@@ -26854,7 +27028,7 @@ async function run() {
       try {
         await saveScoreHistory(octokit, result, config.historyBranch);
       } catch (e) {
-        core4.warning(
+        core5.warning(
           `Could not save score history: ${e.message}. Make sure the workflow has "contents: write" permission and the branch "${config.historyBranch}" exists.`
         );
       }
@@ -26862,65 +27036,71 @@ async function run() {
     await writeWorkflowSummary(result, null).catch(() => {
     });
     if (!passed && config.failOnLowQuality) {
-      core4.setFailed(
+      core5.setFailed(
         `PR quality score ${finalScore}/100 is below the required threshold of ${config.minQualityScore}/100.`
       );
     } else if (!passed) {
-      core4.warning(
+      core5.warning(
         `PR quality score ${finalScore}/100 is below the threshold of ${config.minQualityScore}/100.`
       );
     } else {
-      core4.info(`\u2705 PR passed quality check with score ${finalScore}/100.`);
+      core5.info(`\u2705 PR passed quality check with score ${finalScore}/100.`);
     }
   } catch (error) {
     if (error instanceof Error) {
-      core4.setFailed(`Action failed: ${error.message}`);
+      core5.setFailed(`Action failed: ${error.message}`);
     } else {
-      core4.setFailed("An unknown error occurred.");
+      core5.setFailed("An unknown error occurred.");
     }
   }
 }
 function readConfig() {
-  const openaiKey = core4.getInput("openai-api-key") || null;
-  const anthropicKey = core4.getInput("anthropic-api-key") || null;
+  const openaiKey = core5.getInput("openai-api-key") || null;
+  const anthropicKey = core5.getInput("anthropic-api-key") || null;
   let llmProvider = null;
   let llmApiKey = null;
   let llmModel = "";
   if (openaiKey) {
     llmProvider = "openai";
     llmApiKey = openaiKey;
-    llmModel = core4.getInput("llm-model") || "gpt-4o-mini";
+    llmModel = core5.getInput("llm-model") || "gpt-4o-mini";
   } else if (anthropicKey) {
     llmProvider = "anthropic";
     llmApiKey = anthropicKey;
-    llmModel = core4.getInput("llm-model") || "claude-3-haiku-20240307";
+    llmModel = core5.getInput("llm-model") || "claude-3-haiku-20240307";
   }
   const defaultBranch = github2.context.payload.repository?.default_branch ?? "main";
   return {
-    minQualityScore: parseInt(core4.getInput("min-quality-score") || "50", 10),
-    aiDetectionThreshold: parseFloat(core4.getInput("ai-detection-threshold") || "0.65"),
-    failOnLowQuality: core4.getInput("fail-on-low-quality") === "true",
-    commentOnPr: core4.getInput("comment-on-pr") !== "false",
-    labelPr: core4.getInput("label-pr") !== "false",
-    aiGeneratedLabel: core4.getInput("ai-generated-label") || "ai-generated",
-    lowQualityLabel: core4.getInput("low-quality-label") || "needs-improvement",
-    highQualityLabel: core4.getInput("high-quality-label") || "quality-verified",
-    maxFilesAnalyzed: parseInt(core4.getInput("max-files-analyzed") || "50", 10),
-    excludePaths: (core4.getInput("exclude-paths") || "*.md,*.lock,dist/**,build/**,*.min.js,*.min.css").split(",").map((p) => p.trim()).filter(Boolean),
+    minQualityScore: parseInt(core5.getInput("min-quality-score") || "50", 10),
+    aiDetectionThreshold: parseFloat(core5.getInput("ai-detection-threshold") || "0.65"),
+    failOnLowQuality: core5.getInput("fail-on-low-quality") === "true",
+    commentOnPr: core5.getInput("comment-on-pr") !== "false",
+    labelPr: core5.getInput("label-pr") !== "false",
+    aiGeneratedLabel: core5.getInput("ai-generated-label") || "ai-generated",
+    lowQualityLabel: core5.getInput("low-quality-label") || "needs-improvement",
+    highQualityLabel: core5.getInput("high-quality-label") || "quality-verified",
+    maxFilesAnalyzed: parseInt(core5.getInput("max-files-analyzed") || "50", 10),
+    excludePaths: (core5.getInput("exclude-paths") || "*.md,*.lock,dist/**,build/**,*.min.js,*.min.css").split(",").map((p) => p.trim()).filter(Boolean),
     llmProvider,
     llmApiKey,
     llmModel,
-    trackHistory: core4.getInput("track-history") !== "false",
-    historyBranch: core4.getInput("history-branch") || defaultBranch,
-    requestChangesOnLowQuality: core4.getInput("request-changes-on-low-quality") === "true",
+    trackHistory: core5.getInput("track-history") !== "false",
+    historyBranch: core5.getInput("history-branch") || defaultBranch,
+    requestChangesOnLowQuality: core5.getInput("request-changes-on-low-quality") === "true",
     requestChangesThreshold: parseInt(
-      core4.getInput("request-changes-threshold") || core4.getInput("min-quality-score") || "50",
+      core5.getInput("request-changes-threshold") || core5.getInput("min-quality-score") || "50",
       10
     ),
-    autoApproveOnPass: core4.getInput("auto-approve-on-pass") === "true",
-    autoCloseOnLowQuality: core4.getInput("auto-close-on-low-quality") === "true",
-    autoCloseThreshold: parseInt(core4.getInput("auto-close-threshold") || "20", 10),
-    autoCloseComment: core4.getInput("auto-close-comment") || ""
+    autoApproveOnPass: core5.getInput("auto-approve-on-pass") === "true",
+    autoCloseOnLowQuality: core5.getInput("auto-close-on-low-quality") === "true",
+    autoCloseThreshold: parseInt(core5.getInput("auto-close-threshold") || "20", 10),
+    autoCloseComment: core5.getInput("auto-close-comment") || "",
+    trustedContributors: core5.getInput("trusted-contributors").split(",").map((s) => s.trim()).filter(Boolean),
+    blockedContributors: core5.getInput("blocked-contributors").split(",").map((s) => s.trim()).filter(Boolean),
+    trustBots: core5.getInput("trust-bots") !== "false",
+    trustedOrg: core5.getInput("trusted-org") || null,
+    blockedScoreCap: parseInt(core5.getInput("blocked-score-cap") || "0", 10),
+    skipAnalysisForTrusted: core5.getInput("skip-analysis-for-trusted") !== "false"
   };
 }
 function isExcluded(filename, patterns) {
@@ -26981,10 +27161,10 @@ async function postOrUpdateComment(octokit, owner, repo, prNumber, result, minSc
   const existing = comments.find((c) => c.body?.includes(marker));
   if (existing) {
     await octokit.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
-    core4.info("Updated existing quality report comment.");
+    core5.info("Updated existing quality report comment.");
   } else {
     await octokit.rest.issues.createComment({ owner, repo, issue_number: prNumber, body });
-    core4.info("Posted quality report comment.");
+    core5.info("Posted quality report comment.");
   }
 }
 async function manageLabels(octokit, owner, repo, prNumber, result, config) {
@@ -27006,9 +27186,9 @@ async function manageLabels(octokit, owner, repo, prNumber, result, config) {
     try {
       await ensureLabelExists(octokit, owner, repo, label);
       await octokit.rest.issues.addLabels({ owner, repo, issue_number: prNumber, labels: [label] });
-      core4.info(`Added label: "${label}"`);
+      core5.info(`Added label: "${label}"`);
     } catch (e) {
-      core4.warning(`Could not add label "${label}": ${e.message}`);
+      core5.warning(`Could not add label "${label}": ${e.message}`);
     }
   }
   const { data: currentLabels } = await octokit.rest.issues.listLabelsOnIssue({
@@ -27020,9 +27200,9 @@ async function manageLabels(octokit, owner, repo, prNumber, result, config) {
     if (currentLabels.some((l) => l.name === label)) {
       try {
         await octokit.rest.issues.removeLabel({ owner, repo, issue_number: prNumber, name: label });
-        core4.info(`Removed label: "${label}"`);
+        core5.info(`Removed label: "${label}"`);
       } catch (e) {
-        core4.warning(`Could not remove label "${label}": ${e.message}`);
+        core5.warning(`Could not remove label "${label}": ${e.message}`);
       }
     }
   }

@@ -7,6 +7,11 @@ import { buildPrComment } from "./commenter.js";
 import { runLlmAnalysis, buildCombinedDiff, blendScores } from "./llm-analyzer.js";
 import { saveScoreHistory, writeWorkflowSummary } from "./history.js";
 import { submitReview } from "./reviewer.js";
+import {
+  checkContributor,
+  buildTrustedComment,
+  buildBlockedComment,
+} from "./allowlist.js";
 import type {
   ActionConfig,
   AnalysisResult,
@@ -37,6 +42,74 @@ async function run(): Promise<void> {
 
     core.info(`Analyzing PR #${prNumber}: "${prTitle}" by @${prAuthor}`);
     core.info(`Repo: ${repoOwner}/${repoName}`);
+
+    // --- Allowlist / blocklist check ---
+    const allowlistConfig = {
+      trustedContributors: config.trustedContributors,
+      blockedContributors: config.blockedContributors,
+      trustBots: config.trustBots,
+      trustedOrg: config.trustedOrg,
+      blockedScoreCap: config.blockedScoreCap,
+      skipAnalysisForTrusted: config.skipAnalysisForTrusted,
+    };
+
+    const contributorCheck = await checkContributor(prAuthor, octokit, allowlistConfig);
+
+    if (contributorCheck.status === "trusted" && config.skipAnalysisForTrusted) {
+      core.info(`⭐ Trusted contributor: ${contributorCheck.reason} — skipping analysis.`);
+      core.setOutput("quality-score", "100");
+      core.setOutput("ai-detected", "false");
+      core.setOutput("ai-confidence", "0");
+      core.setOutput("files-analyzed", "0");
+      core.setOutput("passed", "true");
+      if (config.commentOnPr) {
+        await octokit.rest.issues.createComment({
+          owner: repoOwner, repo: repoName, issue_number: prNumber,
+          body: buildTrustedComment(prAuthor, contributorCheck.reason),
+        });
+      }
+      if (config.labelPr) {
+        try {
+          await octokit.rest.issues.addLabels({
+            owner: repoOwner, repo: repoName, issue_number: prNumber,
+            labels: [config.highQualityLabel],
+          });
+        } catch { /* non-fatal */ }
+      }
+      return;
+    }
+
+    if (contributorCheck.status === "blocked") {
+      core.info(`🚫 Blocked contributor: ${contributorCheck.reason}`);
+      core.setOutput("quality-score", String(config.blockedScoreCap));
+      core.setOutput("ai-detected", "true");
+      core.setOutput("ai-confidence", "1");
+      core.setOutput("files-analyzed", "0");
+      core.setOutput("passed", "false");
+      if (config.commentOnPr) {
+        await octokit.rest.issues.createComment({
+          owner: repoOwner, repo: repoName, issue_number: prNumber,
+          body: buildBlockedComment(prAuthor, contributorCheck.reason, config.blockedScoreCap, true),
+        });
+      }
+      if (config.labelPr) {
+        try {
+          await octokit.rest.issues.addLabels({
+            owner: repoOwner, repo: repoName, issue_number: prNumber,
+            labels: [config.aiGeneratedLabel, config.lowQualityLabel],
+          });
+        } catch { /* non-fatal */ }
+      }
+      if (config.failOnLowQuality) {
+        core.setFailed(`PR by @${prAuthor} rejected — contributor is on the blocklist.`);
+      }
+      return;
+    }
+
+    if (contributorCheck.status === "trusted") {
+      core.info(`⭐ Trusted contributor: ${contributorCheck.reason} — running analysis with trusted flag.`);
+    }
+
     if (config.llmProvider) {
       core.info(`LLM analysis enabled: ${config.llmProvider} / ${config.llmModel}`);
     } else {
@@ -287,6 +360,20 @@ function readConfig(): ActionConfig {
     autoCloseOnLowQuality: core.getInput("auto-close-on-low-quality") === "true",
     autoCloseThreshold: parseInt(core.getInput("auto-close-threshold") || "20", 10),
     autoCloseComment: core.getInput("auto-close-comment") || "",
+    trustedContributors: core
+      .getInput("trusted-contributors")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
+    blockedContributors: core
+      .getInput("blocked-contributors")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
+    trustBots: core.getInput("trust-bots") !== "false",
+    trustedOrg: core.getInput("trusted-org") || null,
+    blockedScoreCap: parseInt(core.getInput("blocked-score-cap") || "0", 10),
+    skipAnalysisForTrusted: core.getInput("skip-analysis-for-trusted") !== "false",
   };
 }
 

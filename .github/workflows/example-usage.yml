@@ -23,39 +23,33 @@ jobs:
           # ── Optional: LLM-enhanced detection ──────────────────────────────────
           # openai-api-key: ${{ secrets.OPENAI_API_KEY }}
           # anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
-          # llm-model: gpt-4o-mini
 
           # ── Scoring ───────────────────────────────────────────────────────────
           min-quality-score: 50
           ai-detection-threshold: 0.65
           fail-on-low-quality: false
 
+          # ── Contributor allowlist / blocklist ─────────────────────────────────
+          trust-bots: true                # dependabot, renovate, etc. auto-pass
+          # trusted-contributors: alice,bob,myorg-bot*
+          # blocked-contributors: spammer1,known-bad-actor
+          # trusted-org: my-company       # all org members auto-pass
+
           # ── PR comments & labels ──────────────────────────────────────────────
           comment-on-pr: true
           label-pr: true
-          ai-generated-label: ai-generated
-          low-quality-label: needs-improvement
-          high-quality-label: quality-verified
 
           # ── Automated reviews ─────────────────────────────────────────────────
-          request-changes-on-low-quality: false   # set true to block merge
-          # request-changes-threshold: 50          # defaults to min-quality-score
-          auto-approve-on-pass: false             # set true to auto-approve good PRs
-          auto-close-on-low-quality: false        # set true to hard-reject very bad PRs
-          # auto-close-threshold: 20              # score below which PRs are closed
+          request-changes-on-low-quality: false
+          auto-approve-on-pass: false
+          auto-close-on-low-quality: false
 
           # ── History & badge ───────────────────────────────────────────────────
           track-history: true
-          # history-branch: main
-
-          # ── Performance ───────────────────────────────────────────────────────
-          max-files-analyzed: 50
-          exclude-paths: '*.md,*.lock,dist/**,build/**,*.min.js,*.min.css,package-lock.json,pnpm-lock.yaml,yarn.lock'
 
       - name: Print results
         run: |
           echo "Quality Score : ${{ steps.quality.outputs.quality-score }}/100"
           echo "AI Detected   : ${{ steps.quality.outputs.ai-detected }}"
-          echo "AI Confidence : ${{ steps.quality.outputs.ai-confidence }}"
           echo "Files Analyzed: ${{ steps.quality.outputs.files-analyzed }}"
           echo "Passed        : ${{ steps.quality.outputs.passed }}"

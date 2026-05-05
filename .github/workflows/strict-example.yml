@@ -1,4 +1,4 @@
-name: Strict AI Quality Gate (LLM + Auto-Review)
+name: Strict AI Quality Gate (Full Features)
 
 on:
   pull_request:
@@ -24,18 +24,18 @@ jobs:
           # Scoring
           min-quality-score: 70
           ai-detection-threshold: 0.55
-
-          # Fail the CI check so the status shows red
           fail-on-low-quality: true
 
-          # Request changes when score < 70 (blocks merge via branch protection)
+          # Allowlist — core team and bots always pass
+          trust-bots: true
+          trusted-contributors: alice,bob,carol
+          # trusted-org: my-company       # all org members auto-pass
+          blocked-contributors: ''        # add known bad actors here
+
+          # Automated reviews
           request-changes-on-low-quality: true
           request-changes-threshold: 70
-
-          # Auto-approve when score >= 70 and no AI detected
           auto-approve-on-pass: true
-
-          # Hard-reject completely hopeless PRs (score < 20)
           auto-close-on-low-quality: true
           auto-close-threshold: 20
 

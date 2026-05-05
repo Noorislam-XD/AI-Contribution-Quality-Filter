@@ -112,4 +112,10 @@ export interface ActionConfig {
   autoCloseOnLowQuality: boolean;
   autoCloseThreshold: number;
   autoCloseComment: string;
+  trustedContributors: string[];
+  blockedContributors: string[];
+  trustBots: boolean;
+  trustedOrg: string | null;
+  blockedScoreCap: number;
+  skipAnalysisForTrusted: boolean;
 }

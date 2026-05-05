@@ -72,6 +72,49 @@ inputs:
     required: false
     default: 'quality-verified'
 
+  # ── Contributor allowlist / blocklist ────────────────────────────────────────
+  trusted-contributors:
+    description: |
+      Comma-separated GitHub usernames (or wildcard patterns) that always pass
+      without scoring. Example: "alice,bob,myorg-bot*"
+      Wildcards match the end of the username (e.g. "myorg-*" matches "myorg-ci", "myorg-bot").
+    required: false
+    default: ''
+  blocked-contributors:
+    description: |
+      Comma-separated GitHub usernames that are always auto-failed, regardless
+      of their actual code quality score. Takes priority over trusted-contributors.
+      Example: "spammer1,known-bad-actor"
+    required: false
+    default: ''
+  trust-bots:
+    description: |
+      Automatically trust well-known GitHub automation bots (dependabot, renovate,
+      github-actions, snyk-bot, imgbot, etc.) and any user ending in "[bot]".
+      Set to "false" to analyze bot PRs like normal contributors.
+    required: false
+    default: 'true'
+  trusted-org:
+    description: |
+      GitHub organization name whose members are automatically trusted.
+      Requires the GITHUB_TOKEN to have "read:org" scope, or use a PAT with
+      that scope instead. Leave empty to disable org-based trust.
+      Example: "my-company"
+    required: false
+    default: ''
+  blocked-score-cap:
+    description: |
+      Quality score assigned to PRs from blocked contributors (0-100). Default: 0.
+    required: false
+    default: '0'
+  skip-analysis-for-trusted:
+    description: |
+      When true (default), trusted contributor PRs are approved immediately
+      without running the full analysis. Set to "false" to still run analysis
+      but treat the contributor as trusted (useful for metrics).
+    required: false
+    default: 'true'
+
   # ── Automated review actions ─────────────────────────────────────────────────
   request-changes-on-low-quality:
     description: |

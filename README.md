@@ -9,17 +9,16 @@ Open source maintainers are increasingly overwhelmed by AI-generated PR spam —
 - **Detect AI-generated code** using heuristic analysis + optional LLM reasoning
 - **Score code quality** (0–100) across every changed file
 - **Post visual reports** directly on pull requests
+- **Trusted contributors** bypass analysis entirely — core team and bots never get flagged
+- **Blocked contributors** are auto-failed regardless of code quality
 - **Label PRs automatically** (`ai-generated`, `needs-improvement`, `quality-verified`)
 - **Request changes or approve** automatically based on score
-- **Auto-close** extremely low-quality PRs with an explanation
-- **Track quality over time** — per-repo score history with live README badge
-- **Optionally block merges** via `fail-on-low-quality` or branch protection rules
+- **Auto-close** extremely low-quality PRs
+- **Track quality over time** with a live README badge
 
 ---
 
 ## Quick Start
-
-No API keys needed — works out of the box with the built-in `GITHUB_TOKEN`:
 
 ```yaml
 # .github/workflows/quality-filter.yml
@@ -32,7 +31,7 @@ on:
 permissions:
   pull-requests: write
   issues: write
-  contents: write   # needed for score history
+  contents: write
 
 jobs:
   quality-filter:
@@ -42,86 +41,108 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           min-quality-score: 50
+          trust-bots: true
           track-history: true
 ```
 
 ---
 
-## 🧠 LLM-Enhanced Mode (Recommended)
+## ⭐ Contributor Allowlist & Blocklist
 
-For significantly more accurate detection, provide an OpenAI or Anthropic API key. The action sends the diff to the LLM for semantic review and blends results (65% LLM / 35% heuristic).
+Control which contributors are checked — all three layers run in priority order: **blocklist → trusted list → org membership → bot detection → normal analysis**.
+
+### Trusted contributors (always pass)
+
+Trusted contributors bypass the full analysis. The action immediately approves their PR and posts a short "trusted contributor" note instead of a full report.
 
 ```yaml
 - uses: Noorislam-XD/AI-Contribution-Quality-Filter@v1
   with:
     github-token: ${{ secrets.GITHUB_TOKEN }}
-    openai-api-key: ${{ secrets.OPENAI_API_KEY }}   # Settings → Secrets → Actions
-    # anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}  # alternative
-    # llm-model: gpt-4o   # optional upgrade (default: gpt-4o-mini)
+    trusted-contributors: alice,bob,carol,release-bot*
 ```
 
-If the LLM call fails, the action silently falls back to heuristics — your CI never breaks.
+**Wildcard patterns** are supported: `myorg-*` matches `myorg-ci`, `myorg-deploy`, `myorg-bot`, etc.
+
+### Trust bots automatically (default: on)
+
+By default, well-known GitHub automation bots always pass without analysis:
+
+| Bot | |
+|-----|--|
+| `dependabot[bot]` | `renovate[bot]` |
+| `github-actions[bot]` | `snyk-bot` |
+| `imgbot[bot]` | `mergify[bot]` |
+| `allcontributors[bot]` | `pre-commit-ci[bot]` |
+| Any user ending in `[bot]` | |
+
+Disable with `trust-bots: false` if you want to analyze bot PRs too.
+
+### Trust entire organizations
+
+All members of a GitHub organization automatically pass:
+
+```yaml
+trusted-org: my-company   # all members of @my-company skip analysis
+```
+
+> Requires `read:org` scope. The built-in `GITHUB_TOKEN` has this for public orgs. For private orgs, use a Personal Access Token stored as a secret.
+
+### Blocked contributors (always fail)
+
+Blocked contributors are immediately rejected regardless of code quality — no analysis is run:
+
+```yaml
+blocked-contributors: spammer1,known-bad-actor,sockpuppet*
+```
+
+The PR receives a comment explaining it was rejected, and labels are applied. Blocked takes priority over trusted — if someone appears on both lists, they are blocked.
+
+### Skip analysis vs. run for metrics
+
+By default, trusted contributors skip the full analysis (`skip-analysis-for-trusted: true`). Set it to `false` to still run the analysis (for historical score tracking) while treating the contributor as trusted:
+
+```yaml
+skip-analysis-for-trusted: false   # run analysis but always pass
+```
+
+---
+
+## 🧠 LLM-Enhanced Mode
+
+Provide an OpenAI or Anthropic API key for significantly more accurate detection:
+
+```yaml
+openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+# anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+# llm-model: gpt-4o   # optional upgrade (default: gpt-4o-mini)
+```
+
+Results are blended: 65% LLM + 35% heuristic. Falls back silently to heuristics on failure.
 
 ---
 
 ## 🔴 Automated Review Actions
 
-The action can take automated actions on GitHub reviews — all are disabled by default and must be explicitly opted in.
+All off by default — opt in explicitly.
 
-### Request Changes (blocks merge)
+| Feature | Input | Effect |
+|---------|-------|--------|
+| Request changes | `request-changes-on-low-quality: true` | Blocks merge button below threshold |
+| Auto-approve | `auto-approve-on-pass: true` | Approves passing PRs with no AI detected |
+| Auto-close | `auto-close-on-low-quality: true` | Closes PRs below `auto-close-threshold` |
 
-When enabled, the action submits a "Request changes" GitHub review on low-quality PRs. This blocks the merge button until the review is dismissed or the PR is updated and re-analyzed.
-
-```yaml
-- uses: Noorislam-XD/AI-Contribution-Quality-Filter@v1
-  with:
-    github-token: ${{ secrets.GITHUB_TOKEN }}
-    request-changes-on-low-quality: true
-    request-changes-threshold: 60   # optional, defaults to min-quality-score
-```
-
-**How it works:**
-- When a PR scores below the threshold → "Request changes" review is submitted with a score breakdown and improvement suggestions
-- When the contributor pushes a fix and the PR is re-analyzed → previous review is automatically dismissed before the new one is posted
-- The review comment includes the score bar, top issues, AI signals, and LLM suggestions (if LLM mode is on)
-
-### Auto-Approve (optional, for trusted setups)
-
-Automatically approve PRs that pass the quality threshold with no AI detected:
-
-```yaml
-auto-approve-on-pass: true
-```
-
-> Only enable this if you're using branch protection with "Required reviewers" and want this action to count as a reviewer for basic quality gating.
-
-### Auto-Close (hard rejection)
-
-Automatically close PRs that score below a very low threshold. A comment is posted explaining why and how to re-open:
-
-```yaml
-auto-close-on-low-quality: true
-auto-close-threshold: 20       # only closes truly terrible PRs
-# auto-close-comment: "..."    # optional custom message
-```
+When a contributor pushes a fix, the previous "Request changes" review is automatically dismissed before the new analysis posts its result.
 
 ---
 
 ## 📈 Score History & README Badge
 
-Every PR analysis is saved to `.github/quality-scores.json` and `.github/quality-badge.json` is updated automatically. Add this to your README for a live score badge:
+Every analysis is saved to `.github/quality-scores.json`. Add a live badge to your README:
 
 ```markdown
 ![Quality Score](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/.github/quality-badge.json)
 ```
-
-| Average Score | Badge Color |
-|--------------|-------------|
-| 80–100 | 🟢 Bright green |
-| 65–79 | 🟢 Green |
-| 50–64 | 🟡 Yellow |
-| 30–49 | 🟠 Orange |
-| 0–29 | 🔴 Red |
 
 ---
 
@@ -132,32 +153,31 @@ Every PR analysis is saved to `.github/quality-scores.json` and `.github/quality
   with:
     github-token: ${{ secrets.GITHUB_TOKEN }}
 
-    # LLM (optional)
+    # LLM
     openai-api-key: ${{ secrets.OPENAI_API_KEY }}
-    # llm-model: gpt-4o
 
     # Scoring
-    min-quality-score: 60
+    min-quality-score: 70
     ai-detection-threshold: 0.60
-    fail-on-low-quality: true       # fails the CI check
+    fail-on-low-quality: true
 
-    # PR decoration
-    comment-on-pr: true
-    label-pr: true
-    ai-generated-label: ai-generated
-    low-quality-label: needs-improvement
-    high-quality-label: quality-verified
+    # Allowlist / blocklist
+    trust-bots: true
+    trusted-contributors: alice,bob,release-bot*
+    blocked-contributors: spammer1
+    trusted-org: my-company
+    skip-analysis-for-trusted: true
+    blocked-score-cap: 0
 
     # Automated reviews
-    request-changes-on-low-quality: true    # blocks merge
-    request-changes-threshold: 60
-    auto-approve-on-pass: false
-    auto-close-on-low-quality: true         # hard-reject very bad PRs
+    request-changes-on-low-quality: true
+    request-changes-threshold: 70
+    auto-approve-on-pass: true
+    auto-close-on-low-quality: true
     auto-close-threshold: 20
 
     # History
     track-history: true
-    # history-branch: main
 
     # Performance
     max-files-analyzed: 50
@@ -166,7 +186,7 @@ Every PR analysis is saved to `.github/quality-scores.json` and `.github/quality
 
 ---
 
-## Inputs
+## All Inputs
 
 ### Core
 
@@ -177,24 +197,35 @@ Every PR analysis is saved to `.github/quality-scores.json` and `.github/quality
 | `ai-detection-threshold` | `0.65` | Confidence for AI detection (0–1) |
 | `fail-on-low-quality` | `false` | Fail the CI check if score is below threshold |
 
+### Contributor Allowlist / Blocklist
+
+| Input | Default | Description |
+|-------|---------|-------------|
+| `trusted-contributors` | `''` | Comma-separated usernames/patterns that always pass |
+| `blocked-contributors` | `''` | Comma-separated usernames that always fail |
+| `trust-bots` | `true` | Auto-trust GitHub bots (dependabot, renovate, etc.) |
+| `trusted-org` | `''` | Org name — all members automatically trusted |
+| `blocked-score-cap` | `0` | Score assigned to blocked contributors |
+| `skip-analysis-for-trusted` | `true` | Skip full analysis for trusted contributors |
+
 ### LLM
 
 | Input | Default | Description |
 |-------|---------|-------------|
 | `openai-api-key` | `''` | Enables LLM mode (OpenAI) |
-| `anthropic-api-key` | `''` | Enables LLM mode (Anthropic) — used if no OpenAI key |
-| `llm-model` | `''` | Override model (e.g. `gpt-4o`, `claude-3-5-sonnet-20241022`) |
+| `anthropic-api-key` | `''` | Enables LLM mode (Anthropic) |
+| `llm-model` | `''` | Override model (e.g. `gpt-4o`) |
 
 ### Automated Reviews
 
 | Input | Default | Description |
 |-------|---------|-------------|
-| `request-changes-on-low-quality` | `false` | Submit "Request changes" review below threshold |
-| `request-changes-threshold` | `min-quality-score` | Score threshold for requesting changes |
-| `auto-approve-on-pass` | `false` | Auto-approve passing PRs with no AI detected |
-| `auto-close-on-low-quality` | `false` | Close PRs below `auto-close-threshold` |
+| `request-changes-on-low-quality` | `false` | Submit "Request changes" review |
+| `request-changes-threshold` | `min-quality-score` | Threshold for requesting changes |
+| `auto-approve-on-pass` | `false` | Auto-approve passing PRs |
+| `auto-close-on-low-quality` | `false` | Auto-close below threshold |
 | `auto-close-threshold` | `20` | Score threshold for auto-closing |
-| `auto-close-comment` | `''` | Custom message when auto-closing (leave empty for default) |
+| `auto-close-comment` | `''` | Custom auto-close message |
 
 ### PR Decoration
 
@@ -218,7 +249,7 @@ Every PR analysis is saved to `.github/quality-scores.json` and `.github/quality
 | Input | Default | Description |
 |-------|---------|-------------|
 | `max-files-analyzed` | `50` | Max files per PR |
-| `exclude-paths` | `*.md,*.lock,...` | Comma-separated glob patterns to skip |
+| `exclude-paths` | `*.md,*.lock,...` | Glob patterns to skip |
 
 ---
 
@@ -247,7 +278,7 @@ permissions:
 
 ## How Quality Is Scored
 
-Base score 100, deductions applied per file, weighted by lines changed. LLM and heuristic scores are blended in LLM mode.
+Base 100, deductions per file weighted by lines changed. LLM + heuristic blended in LLM mode.
 
 | Signal | Max Deduction |
 |--------|--------------|
@@ -262,37 +293,18 @@ Base score 100, deductions applied per file, weighted by lines changed. LLM and 
 
 ## How AI Detection Works
 
-### Heuristic signals (always active)
+**Heuristic (always active):** AI comment phrases, verbose comments, generic naming, boilerplate patterns, repetitive structures, excessive docstrings.
 
-| Signal | What it detects |
-|--------|----------------|
-| **AI comment phrases** | "This function...", "Note that...", "This method returns..." |
-| **Verbose comments** | Comment density >35% of lines |
-| **Generic naming** | `result`, `data`, `item`, `response`, `element` overuse |
-| **Boilerplate patterns** | TODO placeholders, lorem ipsum, Hello World |
-| **Repetitive structures** | Near-identical blocks in the diff |
-| **Excessive docstrings** | Auto-generated `@param`/`@returns` for every arg |
-
-### LLM reasoning (optional, requires API key)
-
-Sends the diff to GPT/Claude, which evaluates writing style, naming, structural patterns, missing validation, security antipatterns, and logical quality — returning AI probability, quality score, and specific improvement suggestions.
+**LLM (optional):** Sends the diff to GPT/Claude for semantic evaluation of writing style, naming, structural patterns, security antipatterns, and logical quality.
 
 ---
 
 ## Rebuilding After Changes
 
-If you modify `action/src/`, rebuild before committing:
-
 ```bash
 pnpm --filter ai-contribution-quality-filter-action run build
-# then commit dist/index.js
+# commit dist/index.js
 ```
-
----
-
-## Contributing & Feedback
-
-Issues and PRs are welcome. If the action incorrectly flags a contribution, open an issue — it helps improve the detection model.
 
 ---
 
