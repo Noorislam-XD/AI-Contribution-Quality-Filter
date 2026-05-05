@@ -51,6 +51,17 @@ export type QualityCategory =
   | "complexity"
   | "documentation";
 
+export interface LlmAnalysis {
+  ai_probability: number;
+  quality_score: number;
+  ai_indicators: string[];
+  quality_issues: string[];
+  suggestions: string[];
+  reasoning: string;
+}
+
+export type LlmProvider = "openai" | "anthropic";
+
 export interface AnalysisResult {
   repoOwner: string;
   repoName: string;
@@ -62,6 +73,7 @@ export interface AnalysisResult {
   qualityScore: number;
   aiDetected: boolean;
   aiConfidence: number;
+  llmAnalysis: LlmAnalysis | null;
   fileAnalyses: FileAnalysis[];
   summary: AnalysisSummary;
   passed: boolean;
@@ -89,4 +101,7 @@ export interface ActionConfig {
   highQualityLabel: string;
   maxFilesAnalyzed: number;
   excludePaths: string[];
+  llmProvider: LlmProvider | null;
+  llmApiKey: string | null;
+  llmModel: string;
 }

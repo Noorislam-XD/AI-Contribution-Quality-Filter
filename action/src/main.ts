@@ -4,11 +4,13 @@ import { minimatch } from "minimatch";
 import { detectAiSignals, calculateAiConfidence, detectLanguage } from "./detector.js";
 import { scoreFile, aggregateScore, isAnalyzableFile } from "./scorer.js";
 import { buildPrComment } from "./commenter.js";
+import { runLlmAnalysis, buildCombinedDiff, blendScores } from "./llm-analyzer.js";
 import type {
   ActionConfig,
   AnalysisResult,
   AnalysisSummary,
   FileAnalysis,
+  LlmProvider,
   PullRequestFile,
 } from "./types.js";
 
@@ -33,6 +35,11 @@ async function run(): Promise<void> {
 
     core.info(`Analyzing PR #${prNumber}: "${prTitle}" by @${prAuthor}`);
     core.info(`Repo: ${repoOwner}/${repoName}`);
+    if (config.llmProvider) {
+      core.info(`LLM analysis enabled: ${config.llmProvider} / ${config.llmModel}`);
+    } else {
+      core.info("LLM analysis: disabled (no API key provided — using heuristics only)");
+    }
 
     const { data: prFiles } = await octokit.rest.pulls.listFiles({
       owner: repoOwner,
@@ -54,10 +61,11 @@ async function run(): Promise<void> {
       `Found ${prFiles.length} files in PR. Analyzing ${filesToAnalyze.length} eligible files.`
     );
 
+    // --- Heuristic analysis (always runs) ---
     const fileAnalyses: FileAnalysis[] = [];
 
     for (const file of filesToAnalyze) {
-      core.info(`  → Analyzing: ${file.filename}`);
+      core.info(`  → Heuristic analysis: ${file.filename}`);
       const patch = file.patch ?? "";
       const addedLines = patch
         .split("\n")
@@ -89,15 +97,50 @@ async function run(): Promise<void> {
       });
     }
 
-    const overallScore = aggregateScore(fileAnalyses);
-    const overallAiConfidence =
+    let heuristicScore = aggregateScore(fileAnalyses);
+    let heuristicAiConfidence =
       fileAnalyses.length > 0
         ? Math.max(...fileAnalyses.map((f) => f.aiConfidence))
         : 0;
-    const aiDetected = overallAiConfidence >= config.aiDetectionThreshold;
-    const passed = overallScore >= config.minQualityScore;
 
-    const summary = buildSummary(fileAnalyses, prFiles as PullRequestFile[]);
+    // --- LLM analysis (optional, blended in if enabled) ---
+    let llmAnalysis = null;
+    let finalScore = heuristicScore;
+    let finalAiConfidence = heuristicAiConfidence;
+
+    if (config.llmProvider && config.llmApiKey) {
+      const combinedDiff = buildCombinedDiff(
+        filesToAnalyze.map((f) => ({
+          filename: f.filename,
+          patch: f.patch ?? "",
+          linesAdded: fileAnalyses.find((a) => a.filename === f.filename)?.linesAdded ?? 0,
+        }))
+      );
+
+      const languages = [...new Set(fileAnalyses.map((f) => f.language))].filter(
+        (l) => l !== "Unknown"
+      );
+
+      llmAnalysis = await runLlmAnalysis(
+        combinedDiff,
+        languages,
+        config.llmProvider,
+        config.llmApiKey,
+        config.llmModel
+      );
+
+      if (llmAnalysis) {
+        const blended = blendScores(heuristicAiConfidence, heuristicScore, llmAnalysis);
+        finalScore = blended.qualityScore;
+        finalAiConfidence = blended.aiConfidence;
+        core.info(`  Blended score: heuristic=${heuristicScore} + LLM=${llmAnalysis.quality_score} → ${finalScore}`);
+        core.info(`  Blended AI confidence: heuristic=${Math.round(heuristicAiConfidence * 100)}% + LLM=${Math.round(llmAnalysis.ai_probability * 100)}% → ${Math.round(finalAiConfidence * 100)}%`);
+      }
+    }
+
+    const aiDetected = finalAiConfidence >= config.aiDetectionThreshold;
+    const passed = finalScore >= config.minQualityScore;
+    const summary = buildSummary(fileAnalyses, prFiles as PullRequestFile[], llmAnalysis);
 
     const result: AnalysisResult = {
       repoOwner,
@@ -107,9 +150,10 @@ async function run(): Promise<void> {
       prAuthor,
       filesAnalyzed: fileAnalyses.length,
       totalFilesInPr: prFiles.length,
-      qualityScore: overallScore,
+      qualityScore: finalScore,
       aiDetected,
-      aiConfidence: overallAiConfidence,
+      aiConfidence: finalAiConfidence,
+      llmAnalysis,
       fileAnalyses,
       summary,
       passed,
@@ -117,15 +161,13 @@ async function run(): Promise<void> {
     };
 
     core.info(`\n📊 Analysis complete:`);
-    core.info(`   Quality Score: ${overallScore}/100`);
-    core.info(
-      `   AI Detected: ${aiDetected} (confidence: ${Math.round(overallAiConfidence * 100)}%)`
-    );
+    core.info(`   Quality Score: ${finalScore}/100`);
+    core.info(`   AI Detected: ${aiDetected} (confidence: ${Math.round(finalAiConfidence * 100)}%)`);
     core.info(`   Passed: ${passed} (threshold: ${config.minQualityScore})`);
 
-    core.setOutput("quality-score", String(overallScore));
+    core.setOutput("quality-score", String(finalScore));
     core.setOutput("ai-detected", String(aiDetected));
-    core.setOutput("ai-confidence", String(overallAiConfidence.toFixed(3)));
+    core.setOutput("ai-confidence", String(finalAiConfidence.toFixed(3)));
     core.setOutput("files-analyzed", String(fileAnalyses.length));
     core.setOutput("passed", String(passed));
 
@@ -139,14 +181,14 @@ async function run(): Promise<void> {
 
     if (!passed && config.failOnLowQuality) {
       core.setFailed(
-        `PR quality score ${overallScore}/100 is below the required threshold of ${config.minQualityScore}/100.`
+        `PR quality score ${finalScore}/100 is below the required threshold of ${config.minQualityScore}/100.`
       );
     } else if (!passed) {
       core.warning(
-        `PR quality score ${overallScore}/100 is below the threshold of ${config.minQualityScore}/100. Consider reviewing the contribution.`
+        `PR quality score ${finalScore}/100 is below the threshold of ${config.minQualityScore}/100. Consider reviewing the contribution.`
       );
     } else {
-      core.info(`✅ PR passed quality check with score ${overallScore}/100.`);
+      core.info(`✅ PR passed quality check with score ${finalScore}/100.`);
     }
   } catch (error) {
     if (error instanceof Error) {
@@ -158,6 +200,23 @@ async function run(): Promise<void> {
 }
 
 function readConfig(): ActionConfig {
+  const openaiKey = core.getInput("openai-api-key") || null;
+  const anthropicKey = core.getInput("anthropic-api-key") || null;
+
+  let llmProvider: LlmProvider | null = null;
+  let llmApiKey: string | null = null;
+  let llmModel = "";
+
+  if (openaiKey) {
+    llmProvider = "openai";
+    llmApiKey = openaiKey;
+    llmModel = core.getInput("llm-model") || "gpt-4o-mini";
+  } else if (anthropicKey) {
+    llmProvider = "anthropic";
+    llmApiKey = anthropicKey;
+    llmModel = core.getInput("llm-model") || "claude-3-haiku-20240307";
+  }
+
   return {
     minQualityScore: parseInt(core.getInput("min-quality-score") || "50", 10),
     aiDetectionThreshold: parseFloat(core.getInput("ai-detection-threshold") || "0.65"),
@@ -172,6 +231,9 @@ function readConfig(): ActionConfig {
       .split(",")
       .map((p) => p.trim())
       .filter(Boolean),
+    llmProvider,
+    llmApiKey,
+    llmModel,
   };
 }
 
@@ -181,7 +243,8 @@ function isExcluded(filename: string, patterns: string[]): boolean {
 
 function buildSummary(
   fileAnalyses: FileAnalysis[],
-  allFiles: PullRequestFile[]
+  allFiles: PullRequestFile[],
+  llm: import("./types.js").LlmAnalysis | null
 ): AnalysisSummary {
   const totalLinesAdded = fileAnalyses.reduce((s, f) => s + f.linesAdded, 0);
   const totalLinesRemoved = fileAnalyses.reduce((s, f) => s + f.linesRemoved, 0);
@@ -192,10 +255,14 @@ function buildSummary(
       signalCounts.set(s.description, (signalCounts.get(s.description) ?? 0) + s.matches);
     }
   }
-  const topAiSignals = [...signalCounts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([desc]) => desc);
+  // Merge LLM AI indicators into top signals
+  const llmIndicators = llm?.ai_indicators ?? [];
+  const topAiSignals = [
+    ...llmIndicators,
+    ...[...signalCounts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([desc]) => desc),
+  ].slice(0, 6);
 
   const deductionCounts = new Map<string, number>();
   for (const f of fileAnalyses) {
@@ -203,10 +270,13 @@ function buildSummary(
       deductionCounts.set(d.reason, (deductionCounts.get(d.reason) ?? 0) + d.points);
     }
   }
-  const topQualityIssues = [...deductionCounts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([reason]) => reason);
+  const llmIssues = llm?.quality_issues ?? [];
+  const topQualityIssues = [
+    ...llmIssues,
+    ...[...deductionCounts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([reason]) => reason),
+  ].slice(0, 6);
 
   const languageSet = new Set(fileAnalyses.map((f) => f.language));
   const languagesDetected = [...languageSet].filter(

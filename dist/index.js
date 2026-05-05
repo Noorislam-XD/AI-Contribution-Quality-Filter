@@ -13046,7 +13046,7 @@ var require_fetch = __commonJS({
         this.emit("terminated", error);
       }
     };
-    function fetch(input, init = {}) {
+    function fetch2(input, init = {}) {
       webidl.argumentLengthCheck(arguments, 1, { header: "globalThis.fetch" });
       const p = createDeferredPromise();
       let requestObject;
@@ -13976,7 +13976,7 @@ var require_fetch = __commonJS({
       }
     }
     module2.exports = {
-      fetch,
+      fetch: fetch2,
       Fetch,
       fetching,
       finalizeAndReportTiming
@@ -17232,7 +17232,7 @@ var require_undici = __commonJS({
     module2.exports.getGlobalDispatcher = getGlobalDispatcher;
     if (util.nodeMajor > 16 || util.nodeMajor === 16 && util.nodeMinor >= 8) {
       let fetchImpl = null;
-      module2.exports.fetch = async function fetch(resource) {
+      module2.exports.fetch = async function fetch2(resource) {
         if (!fetchImpl) {
           fetchImpl = require_fetch().fetch;
         }
@@ -17581,12 +17581,12 @@ var require_lib = __commonJS({
             throw new Error("Client has already been disposed.");
           }
           const parsedUrl = new URL(requestUrl);
-          let info2 = this._prepareRequest(verb, parsedUrl, headers);
+          let info3 = this._prepareRequest(verb, parsedUrl, headers);
           const maxTries = this._allowRetries && RetryableHttpVerbs.includes(verb) ? this._maxRetries + 1 : 1;
           let numTries = 0;
           let response;
           do {
-            response = yield this.requestRaw(info2, data);
+            response = yield this.requestRaw(info3, data);
             if (response && response.message && response.message.statusCode === HttpCodes.Unauthorized) {
               let authenticationHandler;
               for (const handler of this.handlers) {
@@ -17596,7 +17596,7 @@ var require_lib = __commonJS({
                 }
               }
               if (authenticationHandler) {
-                return authenticationHandler.handleAuthentication(this, info2, data);
+                return authenticationHandler.handleAuthentication(this, info3, data);
               } else {
                 return response;
               }
@@ -17619,8 +17619,8 @@ var require_lib = __commonJS({
                   }
                 }
               }
-              info2 = this._prepareRequest(verb, parsedRedirectUrl, headers);
-              response = yield this.requestRaw(info2, data);
+              info3 = this._prepareRequest(verb, parsedRedirectUrl, headers);
+              response = yield this.requestRaw(info3, data);
               redirectsRemaining--;
             }
             if (!response.message.statusCode || !HttpResponseRetryCodes.includes(response.message.statusCode)) {
@@ -17649,7 +17649,7 @@ var require_lib = __commonJS({
        * @param info
        * @param data
        */
-      requestRaw(info2, data) {
+      requestRaw(info3, data) {
         return __awaiter(this, void 0, void 0, function* () {
           return new Promise((resolve, reject) => {
             function callbackForResult(err, res) {
@@ -17661,7 +17661,7 @@ var require_lib = __commonJS({
                 resolve(res);
               }
             }
-            this.requestRawWithCallback(info2, data, callbackForResult);
+            this.requestRawWithCallback(info3, data, callbackForResult);
           });
         });
       }
@@ -17671,12 +17671,12 @@ var require_lib = __commonJS({
        * @param data
        * @param onResult
        */
-      requestRawWithCallback(info2, data, onResult) {
+      requestRawWithCallback(info3, data, onResult) {
         if (typeof data === "string") {
-          if (!info2.options.headers) {
-            info2.options.headers = {};
+          if (!info3.options.headers) {
+            info3.options.headers = {};
           }
-          info2.options.headers["Content-Length"] = Buffer.byteLength(data, "utf8");
+          info3.options.headers["Content-Length"] = Buffer.byteLength(data, "utf8");
         }
         let callbackCalled = false;
         function handleResult(err, res) {
@@ -17685,7 +17685,7 @@ var require_lib = __commonJS({
             onResult(err, res);
           }
         }
-        const req = info2.httpModule.request(info2.options, (msg) => {
+        const req = info3.httpModule.request(info3.options, (msg) => {
           const res = new HttpClientResponse(msg);
           handleResult(void 0, res);
         });
@@ -17697,7 +17697,7 @@ var require_lib = __commonJS({
           if (socket) {
             socket.end();
           }
-          handleResult(new Error(`Request timeout: ${info2.options.path}`));
+          handleResult(new Error(`Request timeout: ${info3.options.path}`));
         });
         req.on("error", function(err) {
           handleResult(err);
@@ -17733,27 +17733,27 @@ var require_lib = __commonJS({
         return this._getProxyAgentDispatcher(parsedUrl, proxyUrl);
       }
       _prepareRequest(method, requestUrl, headers) {
-        const info2 = {};
-        info2.parsedUrl = requestUrl;
-        const usingSsl = info2.parsedUrl.protocol === "https:";
-        info2.httpModule = usingSsl ? https : http;
+        const info3 = {};
+        info3.parsedUrl = requestUrl;
+        const usingSsl = info3.parsedUrl.protocol === "https:";
+        info3.httpModule = usingSsl ? https : http;
         const defaultPort = usingSsl ? 443 : 80;
-        info2.options = {};
-        info2.options.host = info2.parsedUrl.hostname;
-        info2.options.port = info2.parsedUrl.port ? parseInt(info2.parsedUrl.port) : defaultPort;
-        info2.options.path = (info2.parsedUrl.pathname || "") + (info2.parsedUrl.search || "");
-        info2.options.method = method;
-        info2.options.headers = this._mergeHeaders(headers);
+        info3.options = {};
+        info3.options.host = info3.parsedUrl.hostname;
+        info3.options.port = info3.parsedUrl.port ? parseInt(info3.parsedUrl.port) : defaultPort;
+        info3.options.path = (info3.parsedUrl.pathname || "") + (info3.parsedUrl.search || "");
+        info3.options.method = method;
+        info3.options.headers = this._mergeHeaders(headers);
         if (this.userAgent != null) {
-          info2.options.headers["user-agent"] = this.userAgent;
+          info3.options.headers["user-agent"] = this.userAgent;
         }
-        info2.options.agent = this._getAgent(info2.parsedUrl);
+        info3.options.agent = this._getAgent(info3.parsedUrl);
         if (this.handlers) {
           for (const handler of this.handlers) {
-            handler.prepareRequest(info2.options);
+            handler.prepareRequest(info3.options);
           }
         }
-        return info2;
+        return info3;
       }
       _mergeHeaders(headers) {
         if (this.requestOptions && this.requestOptions.headers) {
@@ -19735,18 +19735,18 @@ Support boolean input list: \`true | True | TRUE | false | False | FALSE\``);
       (0, command_1.issueCommand)("error", (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
     }
     exports2.error = error;
-    function warning2(message, properties = {}) {
+    function warning3(message, properties = {}) {
       (0, command_1.issueCommand)("warning", (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
     }
-    exports2.warning = warning2;
+    exports2.warning = warning3;
     function notice(message, properties = {}) {
       (0, command_1.issueCommand)("notice", (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
     }
     exports2.notice = notice;
-    function info2(message) {
+    function info3(message) {
       process.stdout.write(message + os.EOL);
     }
-    exports2.info = info2;
+    exports2.info = info3;
     function startGroup(name) {
       (0, command_1.issue)("group", name);
     }
@@ -20708,16 +20708,16 @@ var require_dist_node5 = __commonJS({
       let headers = {};
       let status;
       let url;
-      let { fetch } = globalThis;
+      let { fetch: fetch2 } = globalThis;
       if ((_b = requestOptions.request) == null ? void 0 : _b.fetch) {
-        fetch = requestOptions.request.fetch;
+        fetch2 = requestOptions.request.fetch;
       }
-      if (!fetch) {
+      if (!fetch2) {
         throw new Error(
           "fetch is not set. Please pass a fetch implementation as new Octokit({ request: { fetch }}). Learn more at https://github.com/octokit/octokit.js/#fetch-missing"
         );
       }
-      return fetch(requestOptions.url, {
+      return fetch2(requestOptions.url, {
         method: requestOptions.method,
         body: requestOptions.body,
         redirect: (_c = requestOptions.request) == null ? void 0 : _c.redirect,
@@ -23878,7 +23878,7 @@ var require_github = __commonJS({
 });
 
 // src/main.ts
-var core = __toESM(require_core(), 1);
+var core2 = __toESM(require_core(), 1);
 var github = __toESM(require_github(), 1);
 
 // ../node_modules/.pnpm/balanced-match@4.0.4/node_modules/balanced-match/dist/esm/index.js
@@ -26034,21 +26034,41 @@ function buildPrComment(result, minScore) {
     fileAnalyses,
     summary,
     passed,
-    prTitle,
     filesAnalyzed,
-    totalFilesInPr
+    totalFilesInPr,
+    llmAnalysis
   } = result;
   const scoreEmoji = getScoreEmoji(qualityScore);
   const statusBadge = passed ? "![PASSED](https://img.shields.io/badge/Quality-PASSED-brightgreen)" : "![FAILED](https://img.shields.io/badge/Quality-FAILED-red)";
   const aiStatusBadge = aiDetected ? `![AI Detected](https://img.shields.io/badge/AI_Code-Detected%20(${Math.round(aiConfidence * 100)}%25)-orange)` : `![AI Clean](https://img.shields.io/badge/AI_Code-Not_Detected-green)`;
+  const llmBadge = llmAnalysis ? `![LLM Enhanced](https://img.shields.io/badge/Analysis-LLM%20Enhanced-blueviolet)` : `![Heuristic](https://img.shields.io/badge/Analysis-Heuristic-blue)`;
   const scoreBar = buildScoreBar(qualityScore);
-  const topIssues = summary.topQualityIssues.slice(0, 4);
-  const topSignals = summary.topAiSignals.slice(0, 3);
+  const topIssues = summary.topQualityIssues.slice(0, 5);
+  const topSignals = summary.topAiSignals.slice(0, 4);
   const fileTable = buildFileTable(fileAnalyses);
   const passFailSection = passed ? `> \u2705 **This PR meets the minimum quality threshold of ${minScore}/100.**` : `> \u274C **This PR does not meet the minimum quality threshold of ${minScore}/100.** Please review the issues below and improve the contribution before merging.`;
+  const llmSection = llmAnalysis ? buildLlmSection(llmAnalysis) : "";
+  const aiSection = aiDetected ? `### \u{1F916} AI Code Detection Signals
+
+The following patterns suggest AI-generated code was present in this PR:
+
+${topSignals.map((s) => `- ${s}`).join("\n") || "- General AI patterns detected"}
+
+> *AI detection combines heuristic pattern analysis${llmAnalysis ? " and LLM reasoning" : ""}. False positives are possible.*
+
+---
+
+` : "";
+  const issuesSection = topIssues.length > 0 ? `### \u26A0\uFE0F Quality Issues Detected
+
+${topIssues.map((issue) => `- ${issue}`).join("\n")}
+
+---
+
+` : "";
   return `## \u{1F50D} AI Contribution Quality Filter Report
 
-${statusBadge} ${aiStatusBadge}
+${statusBadge} ${aiStatusBadge} ${llmBadge}
 
 ${passFailSection}
 
@@ -26064,6 +26084,7 @@ ${scoreBar}
 |--------|-------|
 | Quality Score | **${qualityScore}/100** |
 | AI Detection | **${aiDetected ? `Detected (${Math.round(aiConfidence * 100)}% confidence)` : "Not detected"}** |
+| Analysis Mode | **${llmAnalysis ? "Heuristic + LLM (blended)" : "Heuristic only"}** |
 | Files Analyzed | **${filesAnalyzed}** of ${totalFilesInPr} total files |
 | Lines Added | **+${summary.totalLinesAdded}** |
 | Lines Removed | **-${summary.totalLinesRemoved}** |
@@ -26072,23 +26093,7 @@ ${scoreBar}
 
 ---
 
-${aiDetected ? `### \u{1F916} AI Code Detection Signals
-
-The following patterns suggest AI-generated code was present in this PR:
-
-${topSignals.map((s) => `- ${s}`).join("\n") || "- General AI patterns detected"}
-
-> *AI detection uses heuristic analysis of code patterns, naming conventions, comment styles, and structural indicators. False positives are possible.*
-
----
-
-` : ""}${topIssues.length > 0 ? `### \u26A0\uFE0F Quality Issues Detected
-
-${topIssues.map((issue) => `- ${issue}`).join("\n")}
-
----
-
-` : ""}### \u{1F4C1} File Analysis Breakdown
+${llmSection}${aiSection}${issuesSection}### \u{1F4C1} File Analysis Breakdown
 
 ${fileTable}
 
@@ -26103,10 +26108,12 @@ ${getImprovementTips(result)}
 <details>
 <summary>\u2139\uFE0F About this report</summary>
 
-This report was generated by [AI Contribution Quality Filter](https://github.com/Noorislam-XD/AI-Contribution-Quality-Filter). 
+This report was generated by [AI Contribution Quality Filter](https://github.com/Noorislam-XD/AI-Contribution-Quality-Filter).
 
-The quality score (0-100) is calculated based on:
-- **AI code detection** \u2014 heuristic analysis of patterns common in AI-generated code
+**Analysis method:** ${llmAnalysis ? "Heuristic pattern analysis (35% weight) blended with LLM semantic analysis (65% weight)" : "Heuristic pattern analysis only. Add an `openai-api-key` or `anthropic-api-key` input for LLM-enhanced accuracy."}
+
+The quality score (0\u2013100) is calculated based on:
+- **AI code detection** \u2014 pattern analysis + optional LLM reasoning
 - **Code size** \u2014 unusually large diffs are penalized
 - **Error handling** \u2014 presence of try/catch and error handling patterns
 - **Naming conventions** \u2014 quality of identifier names
@@ -26119,10 +26126,23 @@ To configure thresholds or disable this action, see the [documentation](https://
 
 *Generated at ${(/* @__PURE__ */ new Date()).toUTCString()}*`;
 }
+function buildLlmSection(llm) {
+  if (!llm.reasoning && llm.suggestions.length === 0) return "";
+  const suggestionsBlock = llm.suggestions.length > 0 ? `**Suggestions from AI review:**
+${llm.suggestions.map((s) => `- ${s}`).join("\n")}` : "";
+  return `### \u{1F9E0} LLM Code Review
+
+> ${llm.reasoning || "No summary provided."}
+
+${suggestionsBlock}
+
+---
+
+`;
+}
 function buildScoreBar(score) {
   const filled = Math.round(score / 5);
   const empty = 20 - filled;
-  const color = score >= 70 ? "\u{1F7E9}" : score >= 50 ? "\u{1F7E8}" : "\u{1F7E5}";
   return `\`[${"\u2588".repeat(filled)}${"\u2591".repeat(empty)}] ${score}%\``;
 }
 function getScoreEmoji(score) {
@@ -26146,30 +26166,36 @@ ${rows}`;
 }
 function getImprovementTips(result) {
   const tips = [];
-  if (result.aiDetected) {
-    tips.push("\u{1F916} **Review AI-generated sections** \u2014 Ensure generated code is fully understood, tested, and adapted to your codebase.");
-    tips.push('\u{1F4AC} **Remove AI-style comments** \u2014 Replace generic comments like "This function..." with meaningful context.');
-  }
-  if (!result.summary.hasTests) {
-    tips.push("\u{1F9EA} **Add tests** \u2014 Include unit or integration tests for new functionality.");
-  }
-  const hasErrorHandlingIssues = result.fileAnalyses.some(
-    (f) => f.qualityDeductions.some((d) => d.category === "error_handling")
-  );
-  if (hasErrorHandlingIssues) {
-    tips.push("\u{1F6E1}\uFE0F **Add error handling** \u2014 Wrap I/O operations, API calls, and risky logic in try/catch blocks.");
-  }
-  const hasDuplication = result.fileAnalyses.some(
-    (f) => f.qualityDeductions.some((d) => d.category === "code_duplication")
-  );
-  if (hasDuplication) {
-    tips.push("\u267B\uFE0F **Reduce duplication** \u2014 Extract repeated logic into reusable functions or utilities.");
-  }
-  const hasNamingIssues = result.fileAnalyses.some(
-    (f) => f.qualityDeductions.some((d) => d.category === "naming")
-  );
-  if (hasNamingIssues) {
-    tips.push("\u{1F3F7}\uFE0F **Improve naming** \u2014 Use descriptive, meaningful names for variables and functions.");
+  if (result.llmAnalysis?.suggestions && result.llmAnalysis.suggestions.length > 0) {
+    for (const s of result.llmAnalysis.suggestions.slice(0, 4)) {
+      tips.push(`\u{1F4A1} ${s}`);
+    }
+  } else {
+    if (result.aiDetected) {
+      tips.push("\u{1F916} **Review AI-generated sections** \u2014 Ensure generated code is fully understood, tested, and adapted to your codebase.");
+      tips.push('\u{1F4AC} **Remove AI-style comments** \u2014 Replace generic comments like "This function..." with meaningful context.');
+    }
+    if (!result.summary.hasTests) {
+      tips.push("\u{1F9EA} **Add tests** \u2014 Include unit or integration tests for new functionality.");
+    }
+    const hasErrorHandlingIssues = result.fileAnalyses.some(
+      (f) => f.qualityDeductions.some((d) => d.category === "error_handling")
+    );
+    if (hasErrorHandlingIssues) {
+      tips.push("\u{1F6E1}\uFE0F **Add error handling** \u2014 Wrap I/O operations, API calls, and risky logic in try/catch blocks.");
+    }
+    const hasDuplication = result.fileAnalyses.some(
+      (f) => f.qualityDeductions.some((d) => d.category === "code_duplication")
+    );
+    if (hasDuplication) {
+      tips.push("\u267B\uFE0F **Reduce duplication** \u2014 Extract repeated logic into reusable functions or utilities.");
+    }
+    const hasNamingIssues = result.fileAnalyses.some(
+      (f) => f.qualityDeductions.some((d) => d.category === "naming")
+    );
+    if (hasNamingIssues) {
+      tips.push("\u{1F3F7}\uFE0F **Improve naming** \u2014 Use descriptive, meaningful names for variables and functions.");
+    }
   }
   if (tips.length === 0) {
     tips.push("\u2728 **Great job!** This PR shows good code quality. Keep it up!");
@@ -26177,15 +26203,187 @@ function getImprovementTips(result) {
   return tips.map((t) => `- ${t}`).join("\n");
 }
 
+// src/llm-analyzer.ts
+var core = __toESM(require_core(), 1);
+var MAX_DIFF_CHARS = 12e3;
+var MAX_FILES_FOR_LLM = 8;
+var SYSTEM_PROMPT = `You are an expert code reviewer specializing in detecting AI-generated code and assessing code quality in pull requests.
+
+Your job is to analyze a code diff and return a structured JSON assessment. Be honest, specific, and actionable.
+
+AI-generated code typically has these characteristics:
+- Generic, non-descriptive variable names (result, data, item, response, element)
+- Comments that explain obvious things ("This function returns...", "Initialize the variable")
+- Perfect boilerplate structure with no personal style
+- Overly verbose JSDoc/docstrings auto-generated for every parameter
+- Placeholder TODO comments with generic descriptions
+- Repeated structural patterns copy-pasted across functions
+- No contextual understanding of the surrounding codebase
+- Hallmark phrases like "Note that", "It's important to", "This ensures that"
+- Functions that do one generic thing with a name like handleX, processY, manageZ
+
+Quality issues to look for:
+- Missing error handling around I/O, API calls, parsing
+- Code duplication that should be extracted into helpers
+- Poor or misleading naming
+- Overly complex functions (too many branches / responsibilities)
+- Missing input validation
+- Security antipatterns (eval, innerHTML, SQL concatenation, exposed secrets)
+- Performance issues (unnecessary loops, missing memoization, redundant fetches)
+
+IMPORTANT: Respond ONLY with valid JSON. No markdown, no explanation outside the JSON.`;
+var USER_PROMPT_TEMPLATE = (diff, languages) => `Analyze this pull request diff and return your assessment as JSON.
+
+Languages detected: ${languages}
+
+Diff:
+\`\`\`diff
+${diff}
+\`\`\`
+
+Return this exact JSON structure:
+{
+  "ai_probability": <float 0.0-1.0, how likely this is AI-generated>,
+  "quality_score": <integer 0-100, overall code quality>,
+  "ai_indicators": [<up to 5 specific strings describing AI patterns found, empty array if none>],
+  "quality_issues": [<up to 6 specific strings describing quality problems found, empty array if none>],
+  "suggestions": [<up to 4 actionable improvement suggestions>],
+  "reasoning": "<2-3 sentence overall assessment of this contribution>"
+}`;
+async function runLlmAnalysis(diffContent, languages, provider, apiKey, model) {
+  const truncatedDiff = diffContent.slice(0, MAX_DIFF_CHARS);
+  const langStr = languages.join(", ") || "Unknown";
+  try {
+    core.info(`  \u{1F916} Running LLM analysis via ${provider} (${model})...`);
+    let raw;
+    if (provider === "openai") {
+      raw = await callOpenAi(truncatedDiff, langStr, apiKey, model);
+    } else {
+      raw = await callAnthropic(truncatedDiff, langStr, apiKey, model);
+    }
+    const parsed = parseJsonResponse(raw);
+    if (!parsed) {
+      core.warning(`LLM returned invalid JSON \u2014 falling back to heuristics only.`);
+      return null;
+    }
+    core.info(`  \u2705 LLM analysis complete. AI probability: ${Math.round(parsed.ai_probability * 100)}%, Quality: ${parsed.quality_score}/100`);
+    return parsed;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    core.warning(`LLM analysis failed (${msg}) \u2014 falling back to heuristics only.`);
+    return null;
+  }
+}
+async function callOpenAi(diff, languages, apiKey, model) {
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: USER_PROMPT_TEMPLATE(diff, languages) }
+      ],
+      temperature: 0.1,
+      max_tokens: 800,
+      response_format: { type: "json_object" }
+    })
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`OpenAI API error ${response.status}: ${text.slice(0, 200)}`);
+  }
+  const json = await response.json();
+  return json.choices[0]?.message?.content ?? "";
+}
+async function callAnthropic(diff, languages, apiKey, model) {
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01"
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: 800,
+      system: SYSTEM_PROMPT,
+      messages: [
+        { role: "user", content: USER_PROMPT_TEMPLATE(diff, languages) }
+      ]
+    })
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Anthropic API error ${response.status}: ${text.slice(0, 200)}`);
+  }
+  const json = await response.json();
+  return json.content[0]?.text ?? "";
+}
+function parseJsonResponse(raw) {
+  try {
+    const cleaned = raw.trim().replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/\s*```$/i, "");
+    const obj = JSON.parse(cleaned);
+    const ai_probability = clamp(Number(obj["ai_probability"] ?? 0), 0, 1);
+    const quality_score = clamp(Math.round(Number(obj["quality_score"] ?? 70)), 0, 100);
+    const ai_indicators = toStringArray(obj["ai_indicators"]);
+    const quality_issues = toStringArray(obj["quality_issues"]);
+    const suggestions = toStringArray(obj["suggestions"]);
+    const reasoning = typeof obj["reasoning"] === "string" ? obj["reasoning"] : "";
+    return { ai_probability, quality_score, ai_indicators, quality_issues, suggestions, reasoning };
+  } catch {
+    return null;
+  }
+}
+function clamp(n, min, max) {
+  return Math.min(Math.max(n, min), max);
+}
+function toStringArray(v) {
+  if (!Array.isArray(v)) return [];
+  return v.filter((x) => typeof x === "string").slice(0, 8);
+}
+function buildCombinedDiff(files) {
+  const sorted = [...files].sort((a, b) => b.linesAdded - a.linesAdded).slice(0, MAX_FILES_FOR_LLM);
+  const parts = [];
+  let totalChars = 0;
+  for (const file of sorted) {
+    const header = `
+--- ${file.filename}
+`;
+    const chunk = header + file.patch;
+    if (totalChars + chunk.length > MAX_DIFF_CHARS) {
+      const remaining = MAX_DIFF_CHARS - totalChars;
+      if (remaining > 200) {
+        parts.push(chunk.slice(0, remaining) + "\n... [truncated]");
+      }
+      break;
+    }
+    parts.push(chunk);
+    totalChars += chunk.length;
+  }
+  return parts.join("\n");
+}
+function blendScores(heuristicAiConfidence, heuristicQualityScore, llm) {
+  const aiConfidence = heuristicAiConfidence * 0.35 + llm.ai_probability * 0.65;
+  const qualityScore = Math.round(heuristicQualityScore * 0.45 + llm.quality_score * 0.55);
+  return {
+    aiConfidence: Math.min(aiConfidence, 1),
+    qualityScore: Math.max(0, Math.min(100, qualityScore))
+  };
+}
+
 // src/main.ts
 async function run() {
   try {
     const config = readConfig();
-    const token = core.getInput("github-token", { required: true });
+    const token = core2.getInput("github-token", { required: true });
     const octokit = github.getOctokit(token);
     const ctx = github.context;
     if (!ctx.payload.pull_request) {
-      core.warning("This action only runs on pull_request events. Skipping.");
+      core2.warning("This action only runs on pull_request events. Skipping.");
       return;
     }
     const prNumber = ctx.payload.pull_request.number;
@@ -26193,8 +26391,13 @@ async function run() {
     const prAuthor = ctx.payload.pull_request.user.login;
     const repoOwner = ctx.repo.owner;
     const repoName = ctx.repo.repo;
-    core.info(`Analyzing PR #${prNumber}: "${prTitle}" by @${prAuthor}`);
-    core.info(`Repo: ${repoOwner}/${repoName}`);
+    core2.info(`Analyzing PR #${prNumber}: "${prTitle}" by @${prAuthor}`);
+    core2.info(`Repo: ${repoOwner}/${repoName}`);
+    if (config.llmProvider) {
+      core2.info(`LLM analysis enabled: ${config.llmProvider} / ${config.llmModel}`);
+    } else {
+      core2.info("LLM analysis: disabled (no API key provided \u2014 using heuristics only)");
+    }
     const { data: prFiles } = await octokit.rest.pulls.listFiles({
       owner: repoOwner,
       repo: repoName,
@@ -26205,12 +26408,12 @@ async function run() {
       (f) => isAnalyzableFile(f.filename) && !isExcluded(f.filename, config.excludePaths) && f.patch !== void 0
     );
     const filesToAnalyze = eligibleFiles.slice(0, config.maxFilesAnalyzed);
-    core.info(
+    core2.info(
       `Found ${prFiles.length} files in PR. Analyzing ${filesToAnalyze.length} eligible files.`
     );
     const fileAnalyses = [];
     for (const file of filesToAnalyze) {
-      core.info(`  \u2192 Analyzing: ${file.filename}`);
+      core2.info(`  \u2192 Heuristic analysis: ${file.filename}`);
       const patch = file.patch ?? "";
       const addedLines = patch.split("\n").filter((l) => l.startsWith("+") && !l.startsWith("+++"));
       const removedLines = patch.split("\n").filter((l) => l.startsWith("-") && !l.startsWith("---"));
@@ -26235,11 +26438,40 @@ async function run() {
         linesRemoved: removedLines.length
       });
     }
-    const overallScore = aggregateScore(fileAnalyses);
-    const overallAiConfidence = fileAnalyses.length > 0 ? Math.max(...fileAnalyses.map((f) => f.aiConfidence)) : 0;
-    const aiDetected = overallAiConfidence >= config.aiDetectionThreshold;
-    const passed = overallScore >= config.minQualityScore;
-    const summary = buildSummary(fileAnalyses, prFiles);
+    let heuristicScore = aggregateScore(fileAnalyses);
+    let heuristicAiConfidence = fileAnalyses.length > 0 ? Math.max(...fileAnalyses.map((f) => f.aiConfidence)) : 0;
+    let llmAnalysis = null;
+    let finalScore = heuristicScore;
+    let finalAiConfidence = heuristicAiConfidence;
+    if (config.llmProvider && config.llmApiKey) {
+      const combinedDiff = buildCombinedDiff(
+        filesToAnalyze.map((f) => ({
+          filename: f.filename,
+          patch: f.patch ?? "",
+          linesAdded: fileAnalyses.find((a) => a.filename === f.filename)?.linesAdded ?? 0
+        }))
+      );
+      const languages = [...new Set(fileAnalyses.map((f) => f.language))].filter(
+        (l) => l !== "Unknown"
+      );
+      llmAnalysis = await runLlmAnalysis(
+        combinedDiff,
+        languages,
+        config.llmProvider,
+        config.llmApiKey,
+        config.llmModel
+      );
+      if (llmAnalysis) {
+        const blended = blendScores(heuristicAiConfidence, heuristicScore, llmAnalysis);
+        finalScore = blended.qualityScore;
+        finalAiConfidence = blended.aiConfidence;
+        core2.info(`  Blended score: heuristic=${heuristicScore} + LLM=${llmAnalysis.quality_score} \u2192 ${finalScore}`);
+        core2.info(`  Blended AI confidence: heuristic=${Math.round(heuristicAiConfidence * 100)}% + LLM=${Math.round(llmAnalysis.ai_probability * 100)}% \u2192 ${Math.round(finalAiConfidence * 100)}%`);
+      }
+    }
+    const aiDetected = finalAiConfidence >= config.aiDetectionThreshold;
+    const passed = finalScore >= config.minQualityScore;
+    const summary = buildSummary(fileAnalyses, prFiles, llmAnalysis);
     const result = {
       repoOwner,
       repoName,
@@ -26248,26 +26480,25 @@ async function run() {
       prAuthor,
       filesAnalyzed: fileAnalyses.length,
       totalFilesInPr: prFiles.length,
-      qualityScore: overallScore,
+      qualityScore: finalScore,
       aiDetected,
-      aiConfidence: overallAiConfidence,
+      aiConfidence: finalAiConfidence,
+      llmAnalysis,
       fileAnalyses,
       summary,
       passed,
       timestamp: (/* @__PURE__ */ new Date()).toISOString()
     };
-    core.info(`
+    core2.info(`
 \u{1F4CA} Analysis complete:`);
-    core.info(`   Quality Score: ${overallScore}/100`);
-    core.info(
-      `   AI Detected: ${aiDetected} (confidence: ${Math.round(overallAiConfidence * 100)}%)`
-    );
-    core.info(`   Passed: ${passed} (threshold: ${config.minQualityScore})`);
-    core.setOutput("quality-score", String(overallScore));
-    core.setOutput("ai-detected", String(aiDetected));
-    core.setOutput("ai-confidence", String(overallAiConfidence.toFixed(3)));
-    core.setOutput("files-analyzed", String(fileAnalyses.length));
-    core.setOutput("passed", String(passed));
+    core2.info(`   Quality Score: ${finalScore}/100`);
+    core2.info(`   AI Detected: ${aiDetected} (confidence: ${Math.round(finalAiConfidence * 100)}%)`);
+    core2.info(`   Passed: ${passed} (threshold: ${config.minQualityScore})`);
+    core2.setOutput("quality-score", String(finalScore));
+    core2.setOutput("ai-detected", String(aiDetected));
+    core2.setOutput("ai-confidence", String(finalAiConfidence.toFixed(3)));
+    core2.setOutput("files-analyzed", String(fileAnalyses.length));
+    core2.setOutput("passed", String(passed));
     if (config.commentOnPr) {
       await postOrUpdateComment(octokit, repoOwner, repoName, prNumber, result, config.minQualityScore);
     }
@@ -26275,42 +26506,59 @@ async function run() {
       await manageLabels(octokit, repoOwner, repoName, prNumber, result, config);
     }
     if (!passed && config.failOnLowQuality) {
-      core.setFailed(
-        `PR quality score ${overallScore}/100 is below the required threshold of ${config.minQualityScore}/100.`
+      core2.setFailed(
+        `PR quality score ${finalScore}/100 is below the required threshold of ${config.minQualityScore}/100.`
       );
     } else if (!passed) {
-      core.warning(
-        `PR quality score ${overallScore}/100 is below the threshold of ${config.minQualityScore}/100. Consider reviewing the contribution.`
+      core2.warning(
+        `PR quality score ${finalScore}/100 is below the threshold of ${config.minQualityScore}/100. Consider reviewing the contribution.`
       );
     } else {
-      core.info(`\u2705 PR passed quality check with score ${overallScore}/100.`);
+      core2.info(`\u2705 PR passed quality check with score ${finalScore}/100.`);
     }
   } catch (error) {
     if (error instanceof Error) {
-      core.setFailed(`Action failed: ${error.message}`);
+      core2.setFailed(`Action failed: ${error.message}`);
     } else {
-      core.setFailed("An unknown error occurred.");
+      core2.setFailed("An unknown error occurred.");
     }
   }
 }
 function readConfig() {
+  const openaiKey = core2.getInput("openai-api-key") || null;
+  const anthropicKey = core2.getInput("anthropic-api-key") || null;
+  let llmProvider = null;
+  let llmApiKey = null;
+  let llmModel = "";
+  if (openaiKey) {
+    llmProvider = "openai";
+    llmApiKey = openaiKey;
+    llmModel = core2.getInput("llm-model") || "gpt-4o-mini";
+  } else if (anthropicKey) {
+    llmProvider = "anthropic";
+    llmApiKey = anthropicKey;
+    llmModel = core2.getInput("llm-model") || "claude-3-haiku-20240307";
+  }
   return {
-    minQualityScore: parseInt(core.getInput("min-quality-score") || "50", 10),
-    aiDetectionThreshold: parseFloat(core.getInput("ai-detection-threshold") || "0.65"),
-    failOnLowQuality: core.getInput("fail-on-low-quality") === "true",
-    commentOnPr: core.getInput("comment-on-pr") !== "false",
-    labelPr: core.getInput("label-pr") !== "false",
-    aiGeneratedLabel: core.getInput("ai-generated-label") || "ai-generated",
-    lowQualityLabel: core.getInput("low-quality-label") || "needs-improvement",
-    highQualityLabel: core.getInput("high-quality-label") || "quality-verified",
-    maxFilesAnalyzed: parseInt(core.getInput("max-files-analyzed") || "50", 10),
-    excludePaths: (core.getInput("exclude-paths") || "*.md,*.lock,dist/**,build/**,*.min.js,*.min.css").split(",").map((p) => p.trim()).filter(Boolean)
+    minQualityScore: parseInt(core2.getInput("min-quality-score") || "50", 10),
+    aiDetectionThreshold: parseFloat(core2.getInput("ai-detection-threshold") || "0.65"),
+    failOnLowQuality: core2.getInput("fail-on-low-quality") === "true",
+    commentOnPr: core2.getInput("comment-on-pr") !== "false",
+    labelPr: core2.getInput("label-pr") !== "false",
+    aiGeneratedLabel: core2.getInput("ai-generated-label") || "ai-generated",
+    lowQualityLabel: core2.getInput("low-quality-label") || "needs-improvement",
+    highQualityLabel: core2.getInput("high-quality-label") || "quality-verified",
+    maxFilesAnalyzed: parseInt(core2.getInput("max-files-analyzed") || "50", 10),
+    excludePaths: (core2.getInput("exclude-paths") || "*.md,*.lock,dist/**,build/**,*.min.js,*.min.css").split(",").map((p) => p.trim()).filter(Boolean),
+    llmProvider,
+    llmApiKey,
+    llmModel
   };
 }
 function isExcluded(filename, patterns) {
   return patterns.some((pattern) => minimatch(filename, pattern, { matchBase: true }));
 }
-function buildSummary(fileAnalyses, allFiles) {
+function buildSummary(fileAnalyses, allFiles, llm) {
   const totalLinesAdded = fileAnalyses.reduce((s, f) => s + f.linesAdded, 0);
   const totalLinesRemoved = fileAnalyses.reduce((s, f) => s + f.linesRemoved, 0);
   const signalCounts = /* @__PURE__ */ new Map();
@@ -26319,14 +26567,22 @@ function buildSummary(fileAnalyses, allFiles) {
       signalCounts.set(s.description, (signalCounts.get(s.description) ?? 0) + s.matches);
     }
   }
-  const topAiSignals = [...signalCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([desc]) => desc);
+  const llmIndicators = llm?.ai_indicators ?? [];
+  const topAiSignals = [
+    ...llmIndicators,
+    ...[...signalCounts.entries()].sort((a, b) => b[1] - a[1]).map(([desc]) => desc)
+  ].slice(0, 6);
   const deductionCounts = /* @__PURE__ */ new Map();
   for (const f of fileAnalyses) {
     for (const d of f.qualityDeductions) {
       deductionCounts.set(d.reason, (deductionCounts.get(d.reason) ?? 0) + d.points);
     }
   }
-  const topQualityIssues = [...deductionCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([reason]) => reason);
+  const llmIssues = llm?.quality_issues ?? [];
+  const topQualityIssues = [
+    ...llmIssues,
+    ...[...deductionCounts.entries()].sort((a, b) => b[1] - a[1]).map(([reason]) => reason)
+  ].slice(0, 6);
   const languageSet = new Set(fileAnalyses.map((f) => f.language));
   const languagesDetected = [...languageSet].filter(
     (l) => l !== "Unknown" && l !== "JSON" && l !== "YAML" && l !== "Markdown"
@@ -26364,7 +26620,7 @@ async function postOrUpdateComment(octokit, owner, repo, prNumber, result, minSc
       comment_id: existing.id,
       body
     });
-    core.info("Updated existing quality report comment.");
+    core2.info("Updated existing quality report comment.");
   } else {
     await octokit.rest.issues.createComment({
       owner,
@@ -26372,7 +26628,7 @@ async function postOrUpdateComment(octokit, owner, repo, prNumber, result, minSc
       issue_number: prNumber,
       body
     });
-    core.info("Posted quality report comment.");
+    core2.info("Posted quality report comment.");
   }
 }
 async function manageLabels(octokit, owner, repo, prNumber, result, config) {
@@ -26399,9 +26655,9 @@ async function manageLabels(octokit, owner, repo, prNumber, result, config) {
         issue_number: prNumber,
         labels: [label]
       });
-      core.info(`Added label: "${label}"`);
+      core2.info(`Added label: "${label}"`);
     } catch (e) {
-      core.warning(`Could not add label "${label}": ${e.message}`);
+      core2.warning(`Could not add label "${label}": ${e.message}`);
     }
   }
   const { data: currentLabels } = await octokit.rest.issues.listLabelsOnIssue({
@@ -26418,9 +26674,9 @@ async function manageLabels(octokit, owner, repo, prNumber, result, config) {
           issue_number: prNumber,
           name: label
         });
-        core.info(`Removed label: "${label}"`);
+        core2.info(`Removed label: "${label}"`);
       } catch (e) {
-        core.warning(`Could not remove label "${label}": ${e.message}`);
+        core2.warning(`Could not remove label "${label}": ${e.message}`);
       }
     }
   }
