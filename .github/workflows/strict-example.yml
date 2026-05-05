@@ -1,4 +1,4 @@
-name: Strict AI Quality Gate
+name: Strict AI Quality Gate (LLM Enhanced)
 
 on:
   pull_request:
@@ -7,11 +7,11 @@ on:
 permissions:
   pull-requests: write
   issues: write
-  contents: read
+  contents: write   # required for score history tracking
 
 jobs:
   quality-gate:
-    name: Quality Gate (Strict)
+    name: Quality Gate (Strict + LLM)
     runs-on: ubuntu-latest
     steps:
       - name: Run AI Contribution Quality Filter
@@ -19,16 +19,17 @@ jobs:
         uses: Noorislam-XD/AI-Contribution-Quality-Filter@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          # llm-model: gpt-4o   # upgrade for highest accuracy
           min-quality-score: 70
           ai-detection-threshold: 0.55
           fail-on-low-quality: true
           comment-on-pr: true
           label-pr: true
+          track-history: true
 
       - name: Print results
         run: |
-          echo "Quality Score: ${{ steps.quality.outputs.quality-score }}"
-          echo "AI Detected: ${{ steps.quality.outputs.ai-detected }}"
-          echo "AI Confidence: ${{ steps.quality.outputs.ai-confidence }}"
-          echo "Files Analyzed: ${{ steps.quality.outputs.files-analyzed }}"
-          echo "Passed: ${{ steps.quality.outputs.passed }}"
+          echo "Quality Score : ${{ steps.quality.outputs.quality-score }}/100"
+          echo "AI Detected   : ${{ steps.quality.outputs.ai-detected }}"
+          echo "Passed        : ${{ steps.quality.outputs.passed }}"

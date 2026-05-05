@@ -4261,18 +4261,18 @@ var require_webidl = __commonJS({
     webidl.errors.exception = function(message) {
       return new TypeError(`${message.header}: ${message.message}`);
     };
-    webidl.errors.conversionFailed = function(context2) {
-      const plural = context2.types.length === 1 ? "" : " one of";
-      const message = `${context2.argument} could not be converted to${plural}: ${context2.types.join(", ")}.`;
+    webidl.errors.conversionFailed = function(context3) {
+      const plural = context3.types.length === 1 ? "" : " one of";
+      const message = `${context3.argument} could not be converted to${plural}: ${context3.types.join(", ")}.`;
       return webidl.errors.exception({
-        header: context2.prefix,
+        header: context3.prefix,
         message
       });
     };
-    webidl.errors.invalidArgument = function(context2) {
+    webidl.errors.invalidArgument = function(context3) {
       return webidl.errors.exception({
-        header: context2.prefix,
-        message: `"${context2.value}" is an invalid ${context2.type}.`
+        header: context3.prefix,
+        message: `"${context3.value}" is an invalid ${context3.type}.`
       });
     };
     webidl.brandCheck = function(V, I, opts = void 0) {
@@ -9598,15 +9598,15 @@ var require_api_request = __commonJS({
         }
         addSignal(this, signal);
       }
-      onConnect(abort, context2) {
+      onConnect(abort, context3) {
         if (!this.callback) {
           throw new RequestAbortedError();
         }
         this.abort = abort;
-        this.context = context2;
+        this.context = context3;
       }
       onHeaders(statusCode, rawHeaders, resume, statusMessage) {
-        const { callback, opaque, abort, context: context2, responseHeaders, highWaterMark } = this;
+        const { callback, opaque, abort, context: context3, responseHeaders, highWaterMark } = this;
         const headers = responseHeaders === "raw" ? util.parseRawHeaders(rawHeaders) : util.parseHeaders(rawHeaders);
         if (statusCode < 200) {
           if (this.onInfo) {
@@ -9633,7 +9633,7 @@ var require_api_request = __commonJS({
               trailers: this.trailers,
               opaque,
               body,
-              context: context2
+              context: context3
             });
           }
         }
@@ -9753,15 +9753,15 @@ var require_api_stream = __commonJS({
         }
         addSignal(this, signal);
       }
-      onConnect(abort, context2) {
+      onConnect(abort, context3) {
         if (!this.callback) {
           throw new RequestAbortedError();
         }
         this.abort = abort;
-        this.context = context2;
+        this.context = context3;
       }
       onHeaders(statusCode, rawHeaders, resume, statusMessage) {
-        const { factory, opaque, context: context2, callback, responseHeaders } = this;
+        const { factory, opaque, context: context3, callback, responseHeaders } = this;
         const headers = responseHeaders === "raw" ? util.parseRawHeaders(rawHeaders) : util.parseHeaders(rawHeaders);
         if (statusCode < 200) {
           if (this.onInfo) {
@@ -9789,7 +9789,7 @@ var require_api_stream = __commonJS({
             statusCode,
             headers,
             opaque,
-            context: context2
+            context: context3
           });
           if (!res || typeof res.write !== "function" || typeof res.end !== "function" || typeof res.on !== "function") {
             throw new InvalidReturnValueError("expected Writable");
@@ -9981,17 +9981,17 @@ var require_api_pipeline = __commonJS({
         this.res = null;
         addSignal(this, signal);
       }
-      onConnect(abort, context2) {
+      onConnect(abort, context3) {
         const { ret, res } = this;
         assert(!res, "pipeline cannot be retried");
         if (ret.destroyed) {
           throw new RequestAbortedError();
         }
         this.abort = abort;
-        this.context = context2;
+        this.context = context3;
       }
       onHeaders(statusCode, rawHeaders, resume) {
-        const { opaque, handler, context: context2 } = this;
+        const { opaque, handler, context: context3 } = this;
         if (statusCode < 200) {
           if (this.onInfo) {
             const headers = this.responseHeaders === "raw" ? util.parseRawHeaders(rawHeaders) : util.parseHeaders(rawHeaders);
@@ -10009,7 +10009,7 @@ var require_api_pipeline = __commonJS({
             headers,
             opaque,
             body: this.res,
-            context: context2
+            context: context3
           });
         } catch (err) {
           this.res.on("error", util.nop);
@@ -10093,7 +10093,7 @@ var require_api_upgrade = __commonJS({
         this.context = null;
         addSignal(this, signal);
       }
-      onConnect(abort, context2) {
+      onConnect(abort, context3) {
         if (!this.callback) {
           throw new RequestAbortedError();
         }
@@ -10104,7 +10104,7 @@ var require_api_upgrade = __commonJS({
         throw new SocketError("bad upgrade", null);
       }
       onUpgrade(statusCode, rawHeaders, socket) {
-        const { callback, opaque, context: context2 } = this;
+        const { callback, opaque, context: context3 } = this;
         assert.strictEqual(statusCode, 101);
         removeSignal(this);
         this.callback = null;
@@ -10113,7 +10113,7 @@ var require_api_upgrade = __commonJS({
           headers,
           socket,
           opaque,
-          context: context2
+          context: context3
         });
       }
       onError(err) {
@@ -10181,18 +10181,18 @@ var require_api_connect = __commonJS({
         this.abort = null;
         addSignal(this, signal);
       }
-      onConnect(abort, context2) {
+      onConnect(abort, context3) {
         if (!this.callback) {
           throw new RequestAbortedError();
         }
         this.abort = abort;
-        this.context = context2;
+        this.context = context3;
       }
       onHeaders() {
         throw new SocketError("bad connect", null);
       }
       onUpgrade(statusCode, rawHeaders, socket) {
-        const { callback, opaque, context: context2 } = this;
+        const { callback, opaque, context: context3 } = this;
         removeSignal(this);
         this.callback = null;
         let headers = rawHeaders;
@@ -10204,7 +10204,7 @@ var require_api_connect = __commonJS({
           headers,
           socket,
           opaque,
-          context: context2
+          context: context3
         });
       }
       onError(err) {
@@ -17581,12 +17581,12 @@ var require_lib = __commonJS({
             throw new Error("Client has already been disposed.");
           }
           const parsedUrl = new URL(requestUrl);
-          let info3 = this._prepareRequest(verb, parsedUrl, headers);
+          let info4 = this._prepareRequest(verb, parsedUrl, headers);
           const maxTries = this._allowRetries && RetryableHttpVerbs.includes(verb) ? this._maxRetries + 1 : 1;
           let numTries = 0;
           let response;
           do {
-            response = yield this.requestRaw(info3, data);
+            response = yield this.requestRaw(info4, data);
             if (response && response.message && response.message.statusCode === HttpCodes.Unauthorized) {
               let authenticationHandler;
               for (const handler of this.handlers) {
@@ -17596,7 +17596,7 @@ var require_lib = __commonJS({
                 }
               }
               if (authenticationHandler) {
-                return authenticationHandler.handleAuthentication(this, info3, data);
+                return authenticationHandler.handleAuthentication(this, info4, data);
               } else {
                 return response;
               }
@@ -17619,8 +17619,8 @@ var require_lib = __commonJS({
                   }
                 }
               }
-              info3 = this._prepareRequest(verb, parsedRedirectUrl, headers);
-              response = yield this.requestRaw(info3, data);
+              info4 = this._prepareRequest(verb, parsedRedirectUrl, headers);
+              response = yield this.requestRaw(info4, data);
               redirectsRemaining--;
             }
             if (!response.message.statusCode || !HttpResponseRetryCodes.includes(response.message.statusCode)) {
@@ -17649,7 +17649,7 @@ var require_lib = __commonJS({
        * @param info
        * @param data
        */
-      requestRaw(info3, data) {
+      requestRaw(info4, data) {
         return __awaiter(this, void 0, void 0, function* () {
           return new Promise((resolve, reject) => {
             function callbackForResult(err, res) {
@@ -17661,7 +17661,7 @@ var require_lib = __commonJS({
                 resolve(res);
               }
             }
-            this.requestRawWithCallback(info3, data, callbackForResult);
+            this.requestRawWithCallback(info4, data, callbackForResult);
           });
         });
       }
@@ -17671,12 +17671,12 @@ var require_lib = __commonJS({
        * @param data
        * @param onResult
        */
-      requestRawWithCallback(info3, data, onResult) {
+      requestRawWithCallback(info4, data, onResult) {
         if (typeof data === "string") {
-          if (!info3.options.headers) {
-            info3.options.headers = {};
+          if (!info4.options.headers) {
+            info4.options.headers = {};
           }
-          info3.options.headers["Content-Length"] = Buffer.byteLength(data, "utf8");
+          info4.options.headers["Content-Length"] = Buffer.byteLength(data, "utf8");
         }
         let callbackCalled = false;
         function handleResult(err, res) {
@@ -17685,7 +17685,7 @@ var require_lib = __commonJS({
             onResult(err, res);
           }
         }
-        const req = info3.httpModule.request(info3.options, (msg) => {
+        const req = info4.httpModule.request(info4.options, (msg) => {
           const res = new HttpClientResponse(msg);
           handleResult(void 0, res);
         });
@@ -17697,7 +17697,7 @@ var require_lib = __commonJS({
           if (socket) {
             socket.end();
           }
-          handleResult(new Error(`Request timeout: ${info3.options.path}`));
+          handleResult(new Error(`Request timeout: ${info4.options.path}`));
         });
         req.on("error", function(err) {
           handleResult(err);
@@ -17733,27 +17733,27 @@ var require_lib = __commonJS({
         return this._getProxyAgentDispatcher(parsedUrl, proxyUrl);
       }
       _prepareRequest(method, requestUrl, headers) {
-        const info3 = {};
-        info3.parsedUrl = requestUrl;
-        const usingSsl = info3.parsedUrl.protocol === "https:";
-        info3.httpModule = usingSsl ? https : http;
+        const info4 = {};
+        info4.parsedUrl = requestUrl;
+        const usingSsl = info4.parsedUrl.protocol === "https:";
+        info4.httpModule = usingSsl ? https : http;
         const defaultPort = usingSsl ? 443 : 80;
-        info3.options = {};
-        info3.options.host = info3.parsedUrl.hostname;
-        info3.options.port = info3.parsedUrl.port ? parseInt(info3.parsedUrl.port) : defaultPort;
-        info3.options.path = (info3.parsedUrl.pathname || "") + (info3.parsedUrl.search || "");
-        info3.options.method = method;
-        info3.options.headers = this._mergeHeaders(headers);
+        info4.options = {};
+        info4.options.host = info4.parsedUrl.hostname;
+        info4.options.port = info4.parsedUrl.port ? parseInt(info4.parsedUrl.port) : defaultPort;
+        info4.options.path = (info4.parsedUrl.pathname || "") + (info4.parsedUrl.search || "");
+        info4.options.method = method;
+        info4.options.headers = this._mergeHeaders(headers);
         if (this.userAgent != null) {
-          info3.options.headers["user-agent"] = this.userAgent;
+          info4.options.headers["user-agent"] = this.userAgent;
         }
-        info3.options.agent = this._getAgent(info3.parsedUrl);
+        info4.options.agent = this._getAgent(info4.parsedUrl);
         if (this.handlers) {
           for (const handler of this.handlers) {
-            handler.prepareRequest(info3.options);
+            handler.prepareRequest(info4.options);
           }
         }
-        return info3;
+        return info4;
       }
       _mergeHeaders(headers) {
         if (this.requestOptions && this.requestOptions.headers) {
@@ -18140,7 +18140,7 @@ var require_summary = __commonJS({
     exports2.summary = exports2.markdownSummary = exports2.SUMMARY_DOCS_URL = exports2.SUMMARY_ENV_VAR = void 0;
     var os_1 = require("os");
     var fs_1 = require("fs");
-    var { access, appendFile, writeFile } = fs_1.promises;
+    var { access, appendFile, writeFile: writeFile2 } = fs_1.promises;
     exports2.SUMMARY_ENV_VAR = "GITHUB_STEP_SUMMARY";
     exports2.SUMMARY_DOCS_URL = "https://docs.github.com/actions/using-workflows/workflow-commands-for-github-actions#adding-a-job-summary";
     var Summary = class {
@@ -18198,7 +18198,7 @@ var require_summary = __commonJS({
         return __awaiter(this, void 0, void 0, function* () {
           const overwrite = !!(options === null || options === void 0 ? void 0 : options.overwrite);
           const filePath = yield this.filePath();
-          const writeFunc = overwrite ? writeFile : appendFile;
+          const writeFunc = overwrite ? writeFile2 : appendFile;
           yield writeFunc(filePath, this._buffer, { encoding: "utf8" });
           return this.emptyBuffer();
         });
@@ -19743,10 +19743,10 @@ Support boolean input list: \`true | True | TRUE | false | False | FALSE\``);
       (0, command_1.issueCommand)("notice", (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
     }
     exports2.notice = notice;
-    function info3(message) {
+    function info4(message) {
       process.stdout.write(message + os.EOL);
     }
-    exports2.info = info3;
+    exports2.info = info4;
     function startGroup(name) {
       (0, command_1.issue)("group", name);
     }
@@ -20287,8 +20287,8 @@ var require_dist_node2 = __commonJS({
     function isKeyOperator(operator) {
       return operator === ";" || operator === "&" || operator === "?";
     }
-    function getValues(context2, operator, key, modifier) {
-      var value = context2[key], result = [];
+    function getValues(context3, operator, key, modifier) {
+      var value = context3[key], result = [];
       if (isDefined(value) && value !== "") {
         if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
           value = value.toString();
@@ -20352,7 +20352,7 @@ var require_dist_node2 = __commonJS({
         expand: expand2.bind(null, template)
       };
     }
-    function expand2(template, context2) {
+    function expand2(template, context3) {
       var operators = ["+", "#", ".", "/", ";", "?", "&"];
       template = template.replace(
         /\{([^\{\}]+)\}|([^\{\}]+)/g,
@@ -20366,7 +20366,7 @@ var require_dist_node2 = __commonJS({
             }
             expression.split(/,/g).forEach(function(variable) {
               var tmp = /([^:\*]*)(?::(\d+)|(\*))?/.exec(variable);
-              values.push(getValues(context2, operator, tmp[1], tmp[2] || tmp[3]));
+              values.push(getValues(context3, operator, tmp[1], tmp[2] || tmp[3]));
             });
             if (operator && operator !== "+") {
               var separator = ",";
@@ -23878,8 +23878,8 @@ var require_github = __commonJS({
 });
 
 // src/main.ts
-var core2 = __toESM(require_core(), 1);
-var github = __toESM(require_github(), 1);
+var core3 = __toESM(require_core(), 1);
+var github2 = __toESM(require_github(), 1);
 
 // ../node_modules/.pnpm/balanced-match@4.0.4/node_modules/balanced-match/dist/esm/index.js
 var balanced = (a, b, str) => {
@@ -26375,15 +26375,192 @@ function blendScores(heuristicAiConfidence, heuristicQualityScore, llm) {
   };
 }
 
+// src/history.ts
+var core2 = __toESM(require_core(), 1);
+var github = __toESM(require_github(), 1);
+var SCORES_FILE = ".github/quality-scores.json";
+var BADGE_FILE = ".github/quality-badge.json";
+var MAX_HISTORY_ENTRIES = 200;
+async function saveScoreHistory(octokit, result, branch) {
+  const { repoOwner, repoName } = result;
+  const ctx = github.context;
+  const sha = ctx.payload.pull_request?.head?.sha ?? ctx.sha;
+  const prBranch = ctx.payload.pull_request?.head?.ref ?? "unknown";
+  const runId = ctx.runId;
+  const entry = {
+    prNumber: result.prNumber,
+    prTitle: result.prTitle,
+    prAuthor: result.prAuthor,
+    qualityScore: result.qualityScore,
+    aiConfidence: parseFloat(result.aiConfidence.toFixed(3)),
+    aiDetected: result.aiDetected,
+    passed: result.passed,
+    filesAnalyzed: result.filesAnalyzed,
+    linesAdded: result.summary.totalLinesAdded,
+    sha: sha.slice(0, 7),
+    branch: prBranch,
+    runId,
+    timestamp: result.timestamp
+  };
+  let history = await readHistory(octokit, repoOwner, repoName, branch);
+  const existingIdx = history.entries.findIndex((e) => e.prNumber === result.prNumber);
+  if (existingIdx >= 0) {
+    history.entries[existingIdx] = entry;
+  } else {
+    history.entries.unshift(entry);
+  }
+  if (history.entries.length > MAX_HISTORY_ENTRIES) {
+    history.entries = history.entries.slice(0, MAX_HISTORY_ENTRIES);
+  }
+  history.lastUpdated = result.timestamp;
+  history.totalPrsAnalyzed = history.entries.length;
+  history.averageScore = computeAverage(history.entries);
+  history.repo = `${repoOwner}/${repoName}`;
+  await writeFile(octokit, repoOwner, repoName, branch, SCORES_FILE, JSON.stringify(history, null, 2));
+  const badge = buildBadgeJson(history.averageScore, history.totalPrsAnalyzed);
+  await writeFile(octokit, repoOwner, repoName, branch, BADGE_FILE, JSON.stringify(badge, null, 2));
+  core2.info(`\u{1F4C8} Score history saved: ${history.totalPrsAnalyzed} entries, avg ${history.averageScore}/100`);
+  core2.info(`\u{1F3F7}\uFE0F  Badge URL: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/${repoOwner}/${repoName}/${branch}/${BADGE_FILE}`);
+}
+async function readHistory(octokit, owner, repo, branch) {
+  try {
+    const { data } = await octokit.rest.repos.getContent({
+      owner,
+      repo,
+      path: SCORES_FILE,
+      ref: branch
+    });
+    if ("content" in data && typeof data.content === "string") {
+      const decoded = Buffer.from(data.content, "base64").toString("utf-8");
+      return JSON.parse(decoded);
+    }
+  } catch {
+  }
+  return {
+    repo: `${owner}/${repo}`,
+    lastUpdated: (/* @__PURE__ */ new Date()).toISOString(),
+    averageScore: 0,
+    totalPrsAnalyzed: 0,
+    entries: []
+  };
+}
+async function writeFile(octokit, owner, repo, branch, path2, content) {
+  const encodedContent = Buffer.from(content).toString("base64");
+  let sha;
+  try {
+    const { data } = await octokit.rest.repos.getContent({ owner, repo, path: path2, ref: branch });
+    if ("sha" in data) sha = data.sha;
+  } catch {
+  }
+  await octokit.rest.repos.createOrUpdateFileContents({
+    owner,
+    repo,
+    path: path2,
+    message: `chore: update quality scores [skip ci]`,
+    content: encodedContent,
+    branch,
+    ...sha ? { sha } : {}
+  });
+}
+function computeAverage(entries) {
+  if (entries.length === 0) return 0;
+  const sum = entries.reduce((s, e) => s + e.qualityScore, 0);
+  return Math.round(sum / entries.length);
+}
+function buildBadgeJson(averageScore, total) {
+  let color = "red";
+  if (averageScore >= 80) color = "brightgreen";
+  else if (averageScore >= 65) color = "green";
+  else if (averageScore >= 50) color = "yellow";
+  else if (averageScore >= 30) color = "orange";
+  return {
+    schemaVersion: 1,
+    label: "quality score",
+    message: `${averageScore}/100 (${total} PRs)`,
+    color,
+    cacheSeconds: 3600
+  };
+}
+async function writeWorkflowSummary(result, history) {
+  const { qualityScore, aiDetected, aiConfidence, passed, summary, filesAnalyzed, totalFilesInPr, prNumber, prTitle, prAuthor, llmAnalysis } = result;
+  const scoreBar = buildTextBar(qualityScore);
+  const trend = history ? buildTrend(history, qualityScore) : "";
+  const summaryLines = [
+    `## \u{1F50D} AI Contribution Quality Filter \u2014 PR #${prNumber}`,
+    ``,
+    `> **"${prTitle}"** by @${prAuthor}`,
+    ``,
+    `| | |`,
+    `|---|---|`,
+    `| **Quality Score** | ${scoreBar} **${qualityScore}/100** |`,
+    `| **Status** | ${passed ? "\u2705 PASSED" : "\u274C FAILED"} |`,
+    `| **AI Detected** | ${aiDetected ? `\u{1F916} Yes (${Math.round(aiConfidence * 100)}% confidence)` : "\u2705 Not detected"} |`,
+    `| **Analysis Mode** | ${llmAnalysis ? "Heuristic + LLM (blended)" : "Heuristic only"} |`,
+    `| **Files Analyzed** | ${filesAnalyzed} / ${totalFilesInPr} |`,
+    `| **Lines Added** | +${summary.totalLinesAdded} |`,
+    `| **Has Tests** | ${summary.hasTests ? "\u2705 Yes" : "\u26A0\uFE0F Not detected"} |`,
+    ``
+  ];
+  if (llmAnalysis?.reasoning) {
+    summaryLines.push(`### \u{1F9E0} LLM Assessment`);
+    summaryLines.push(`> ${llmAnalysis.reasoning}`);
+    summaryLines.push(``);
+  }
+  if (summary.topAiSignals.length > 0 && aiDetected) {
+    summaryLines.push(`### \u{1F916} AI Detection Signals`);
+    for (const s of summary.topAiSignals.slice(0, 4)) {
+      summaryLines.push(`- ${s}`);
+    }
+    summaryLines.push(``);
+  }
+  if (summary.topQualityIssues.length > 0) {
+    summaryLines.push(`### \u26A0\uFE0F Quality Issues`);
+    for (const issue of summary.topQualityIssues.slice(0, 5)) {
+      summaryLines.push(`- ${issue}`);
+    }
+    summaryLines.push(``);
+  }
+  if (trend) {
+    summaryLines.push(`### \u{1F4C8} Repository Score Trend`);
+    summaryLines.push(trend);
+    summaryLines.push(``);
+  }
+  const summaryText = summaryLines.join("\n");
+  const summaryFile = process.env["GITHUB_STEP_SUMMARY"];
+  if (summaryFile) {
+    const fs = await import("fs");
+    fs.appendFileSync(summaryFile, summaryText + "\n");
+    core2.info("Wrote workflow summary.");
+  }
+}
+function buildTextBar(score) {
+  const filled = Math.round(score / 10);
+  const empty = 10 - filled;
+  return `${"\u2588".repeat(filled)}${"\u2591".repeat(empty)}`;
+}
+function buildTrend(history, currentScore) {
+  if (history.length === 0) return "";
+  const recent = [...history].slice(0, 9).reverse();
+  recent.push({ qualityScore: currentScore });
+  const rows = recent.map((e, i) => {
+    const label = i === recent.length - 1 ? "**Now**" : `PR #${e.prNumber}`;
+    const bar = buildTextBar(e.qualityScore);
+    return `| ${label} | \`${bar}\` | ${e.qualityScore}/100 |`;
+  });
+  return `| PR | Score Bar | Score |
+|---|---|---|
+${rows.join("\n")}`;
+}
+
 // src/main.ts
 async function run() {
   try {
     const config = readConfig();
-    const token = core2.getInput("github-token", { required: true });
-    const octokit = github.getOctokit(token);
-    const ctx = github.context;
+    const token = core3.getInput("github-token", { required: true });
+    const octokit = github2.getOctokit(token);
+    const ctx = github2.context;
     if (!ctx.payload.pull_request) {
-      core2.warning("This action only runs on pull_request events. Skipping.");
+      core3.warning("This action only runs on pull_request events. Skipping.");
       return;
     }
     const prNumber = ctx.payload.pull_request.number;
@@ -26391,12 +26568,12 @@ async function run() {
     const prAuthor = ctx.payload.pull_request.user.login;
     const repoOwner = ctx.repo.owner;
     const repoName = ctx.repo.repo;
-    core2.info(`Analyzing PR #${prNumber}: "${prTitle}" by @${prAuthor}`);
-    core2.info(`Repo: ${repoOwner}/${repoName}`);
+    core3.info(`Analyzing PR #${prNumber}: "${prTitle}" by @${prAuthor}`);
+    core3.info(`Repo: ${repoOwner}/${repoName}`);
     if (config.llmProvider) {
-      core2.info(`LLM analysis enabled: ${config.llmProvider} / ${config.llmModel}`);
+      core3.info(`LLM analysis enabled: ${config.llmProvider} / ${config.llmModel}`);
     } else {
-      core2.info("LLM analysis: disabled (no API key provided \u2014 using heuristics only)");
+      core3.info("LLM analysis: disabled (no API key \u2014 using heuristics only)");
     }
     const { data: prFiles } = await octokit.rest.pulls.listFiles({
       owner: repoOwner,
@@ -26408,12 +26585,12 @@ async function run() {
       (f) => isAnalyzableFile(f.filename) && !isExcluded(f.filename, config.excludePaths) && f.patch !== void 0
     );
     const filesToAnalyze = eligibleFiles.slice(0, config.maxFilesAnalyzed);
-    core2.info(
+    core3.info(
       `Found ${prFiles.length} files in PR. Analyzing ${filesToAnalyze.length} eligible files.`
     );
     const fileAnalyses = [];
     for (const file of filesToAnalyze) {
-      core2.info(`  \u2192 Heuristic analysis: ${file.filename}`);
+      core3.info(`  \u2192 Heuristic: ${file.filename}`);
       const patch = file.patch ?? "";
       const addedLines = patch.split("\n").filter((l) => l.startsWith("+") && !l.startsWith("+++"));
       const removedLines = patch.split("\n").filter((l) => l.startsWith("-") && !l.startsWith("---"));
@@ -26421,12 +26598,7 @@ async function run() {
       const language = detectLanguage(file.filename);
       const aiSignals = detectAiSignals(addedCode, file.filename);
       const aiConfidence = calculateAiConfidence(aiSignals);
-      const { score, deductions } = scoreFile(
-        file.filename,
-        patch,
-        aiSignals,
-        aiConfidence
-      );
+      const { score, deductions } = scoreFile(file.filename, patch, aiSignals, aiConfidence);
       fileAnalyses.push({
         filename: file.filename,
         language,
@@ -26465,8 +26637,8 @@ async function run() {
         const blended = blendScores(heuristicAiConfidence, heuristicScore, llmAnalysis);
         finalScore = blended.qualityScore;
         finalAiConfidence = blended.aiConfidence;
-        core2.info(`  Blended score: heuristic=${heuristicScore} + LLM=${llmAnalysis.quality_score} \u2192 ${finalScore}`);
-        core2.info(`  Blended AI confidence: heuristic=${Math.round(heuristicAiConfidence * 100)}% + LLM=${Math.round(llmAnalysis.ai_probability * 100)}% \u2192 ${Math.round(finalAiConfidence * 100)}%`);
+        core3.info(`  Blended score: heuristic=${heuristicScore} + LLM=${llmAnalysis.quality_score} \u2192 ${finalScore}`);
+        core3.info(`  Blended AI confidence: ${Math.round(heuristicAiConfidence * 100)}% + ${Math.round(llmAnalysis.ai_probability * 100)}% \u2192 ${Math.round(finalAiConfidence * 100)}%`);
       }
     }
     const aiDetected = finalAiConfidence >= config.aiDetectionThreshold;
@@ -26489,70 +26661,84 @@ async function run() {
       passed,
       timestamp: (/* @__PURE__ */ new Date()).toISOString()
     };
-    core2.info(`
+    core3.info(`
 \u{1F4CA} Analysis complete:`);
-    core2.info(`   Quality Score: ${finalScore}/100`);
-    core2.info(`   AI Detected: ${aiDetected} (confidence: ${Math.round(finalAiConfidence * 100)}%)`);
-    core2.info(`   Passed: ${passed} (threshold: ${config.minQualityScore})`);
-    core2.setOutput("quality-score", String(finalScore));
-    core2.setOutput("ai-detected", String(aiDetected));
-    core2.setOutput("ai-confidence", String(finalAiConfidence.toFixed(3)));
-    core2.setOutput("files-analyzed", String(fileAnalyses.length));
-    core2.setOutput("passed", String(passed));
+    core3.info(`   Quality Score: ${finalScore}/100`);
+    core3.info(`   AI Detected: ${aiDetected} (${Math.round(finalAiConfidence * 100)}%)`);
+    core3.info(`   Passed: ${passed} (threshold: ${config.minQualityScore})`);
+    core3.setOutput("quality-score", String(finalScore));
+    core3.setOutput("ai-detected", String(aiDetected));
+    core3.setOutput("ai-confidence", String(finalAiConfidence.toFixed(3)));
+    core3.setOutput("files-analyzed", String(fileAnalyses.length));
+    core3.setOutput("passed", String(passed));
     if (config.commentOnPr) {
       await postOrUpdateComment(octokit, repoOwner, repoName, prNumber, result, config.minQualityScore);
     }
     if (config.labelPr) {
       await manageLabels(octokit, repoOwner, repoName, prNumber, result, config);
     }
+    if (config.trackHistory) {
+      try {
+        await saveScoreHistory(octokit, result, config.historyBranch);
+      } catch (e) {
+        core3.warning(
+          `Could not save score history: ${e.message}. Make sure the workflow has "contents: write" permission and the branch "${config.historyBranch}" exists.`
+        );
+      }
+    }
+    await writeWorkflowSummary(result, null).catch(() => {
+    });
     if (!passed && config.failOnLowQuality) {
-      core2.setFailed(
+      core3.setFailed(
         `PR quality score ${finalScore}/100 is below the required threshold of ${config.minQualityScore}/100.`
       );
     } else if (!passed) {
-      core2.warning(
-        `PR quality score ${finalScore}/100 is below the threshold of ${config.minQualityScore}/100. Consider reviewing the contribution.`
+      core3.warning(
+        `PR quality score ${finalScore}/100 is below the threshold of ${config.minQualityScore}/100.`
       );
     } else {
-      core2.info(`\u2705 PR passed quality check with score ${finalScore}/100.`);
+      core3.info(`\u2705 PR passed quality check with score ${finalScore}/100.`);
     }
   } catch (error) {
     if (error instanceof Error) {
-      core2.setFailed(`Action failed: ${error.message}`);
+      core3.setFailed(`Action failed: ${error.message}`);
     } else {
-      core2.setFailed("An unknown error occurred.");
+      core3.setFailed("An unknown error occurred.");
     }
   }
 }
 function readConfig() {
-  const openaiKey = core2.getInput("openai-api-key") || null;
-  const anthropicKey = core2.getInput("anthropic-api-key") || null;
+  const openaiKey = core3.getInput("openai-api-key") || null;
+  const anthropicKey = core3.getInput("anthropic-api-key") || null;
   let llmProvider = null;
   let llmApiKey = null;
   let llmModel = "";
   if (openaiKey) {
     llmProvider = "openai";
     llmApiKey = openaiKey;
-    llmModel = core2.getInput("llm-model") || "gpt-4o-mini";
+    llmModel = core3.getInput("llm-model") || "gpt-4o-mini";
   } else if (anthropicKey) {
     llmProvider = "anthropic";
     llmApiKey = anthropicKey;
-    llmModel = core2.getInput("llm-model") || "claude-3-haiku-20240307";
+    llmModel = core3.getInput("llm-model") || "claude-3-haiku-20240307";
   }
+  const defaultBranch = github2.context.payload.repository?.default_branch ?? "main";
   return {
-    minQualityScore: parseInt(core2.getInput("min-quality-score") || "50", 10),
-    aiDetectionThreshold: parseFloat(core2.getInput("ai-detection-threshold") || "0.65"),
-    failOnLowQuality: core2.getInput("fail-on-low-quality") === "true",
-    commentOnPr: core2.getInput("comment-on-pr") !== "false",
-    labelPr: core2.getInput("label-pr") !== "false",
-    aiGeneratedLabel: core2.getInput("ai-generated-label") || "ai-generated",
-    lowQualityLabel: core2.getInput("low-quality-label") || "needs-improvement",
-    highQualityLabel: core2.getInput("high-quality-label") || "quality-verified",
-    maxFilesAnalyzed: parseInt(core2.getInput("max-files-analyzed") || "50", 10),
-    excludePaths: (core2.getInput("exclude-paths") || "*.md,*.lock,dist/**,build/**,*.min.js,*.min.css").split(",").map((p) => p.trim()).filter(Boolean),
+    minQualityScore: parseInt(core3.getInput("min-quality-score") || "50", 10),
+    aiDetectionThreshold: parseFloat(core3.getInput("ai-detection-threshold") || "0.65"),
+    failOnLowQuality: core3.getInput("fail-on-low-quality") === "true",
+    commentOnPr: core3.getInput("comment-on-pr") !== "false",
+    labelPr: core3.getInput("label-pr") !== "false",
+    aiGeneratedLabel: core3.getInput("ai-generated-label") || "ai-generated",
+    lowQualityLabel: core3.getInput("low-quality-label") || "needs-improvement",
+    highQualityLabel: core3.getInput("high-quality-label") || "quality-verified",
+    maxFilesAnalyzed: parseInt(core3.getInput("max-files-analyzed") || "50", 10),
+    excludePaths: (core3.getInput("exclude-paths") || "*.md,*.lock,dist/**,build/**,*.min.js,*.min.css").split(",").map((p) => p.trim()).filter(Boolean),
     llmProvider,
     llmApiKey,
-    llmModel
+    llmModel,
+    trackHistory: core3.getInput("track-history") !== "false",
+    historyBranch: core3.getInput("history-branch") || defaultBranch
   };
 }
 function isExcluded(filename, patterns) {
@@ -26570,7 +26756,7 @@ function buildSummary(fileAnalyses, allFiles, llm) {
   const llmIndicators = llm?.ai_indicators ?? [];
   const topAiSignals = [
     ...llmIndicators,
-    ...[...signalCounts.entries()].sort((a, b) => b[1] - a[1]).map(([desc]) => desc)
+    ...[...signalCounts.entries()].sort((a, b) => b[1] - a[1]).map(([d]) => d)
   ].slice(0, 6);
   const deductionCounts = /* @__PURE__ */ new Map();
   for (const f of fileAnalyses) {
@@ -26581,7 +26767,7 @@ function buildSummary(fileAnalyses, allFiles, llm) {
   const llmIssues = llm?.quality_issues ?? [];
   const topQualityIssues = [
     ...llmIssues,
-    ...[...deductionCounts.entries()].sort((a, b) => b[1] - a[1]).map(([reason]) => reason)
+    ...[...deductionCounts.entries()].sort((a, b) => b[1] - a[1]).map(([r]) => r)
   ].slice(0, 6);
   const languageSet = new Set(fileAnalyses.map((f) => f.language));
   const languagesDetected = [...languageSet].filter(
@@ -26590,9 +26776,7 @@ function buildSummary(fileAnalyses, allFiles, llm) {
   const hasTests = allFiles.some(
     (f) => /\.(test|spec)\.\w+$/.test(f.filename) || f.filename.includes("__tests__") || f.filename.includes("/tests/") || f.filename.includes("/test/")
   );
-  const hasDocumentation = allFiles.some(
-    (f) => /\.(md|rst|txt)$/.test(f.filename)
-  );
+  const hasDocumentation = allFiles.some((f) => /\.(md|rst|txt)$/.test(f.filename));
   return {
     totalLinesAdded,
     totalLinesRemoved,
@@ -26614,21 +26798,11 @@ async function postOrUpdateComment(octokit, owner, repo, prNumber, result, minSc
   });
   const existing = comments.find((c) => c.body?.includes(marker));
   if (existing) {
-    await octokit.rest.issues.updateComment({
-      owner,
-      repo,
-      comment_id: existing.id,
-      body
-    });
-    core2.info("Updated existing quality report comment.");
+    await octokit.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+    core3.info("Updated existing quality report comment.");
   } else {
-    await octokit.rest.issues.createComment({
-      owner,
-      repo,
-      issue_number: prNumber,
-      body
-    });
-    core2.info("Posted quality report comment.");
+    await octokit.rest.issues.createComment({ owner, repo, issue_number: prNumber, body });
+    core3.info("Posted quality report comment.");
   }
 }
 async function manageLabels(octokit, owner, repo, prNumber, result, config) {
@@ -26649,15 +26823,10 @@ async function manageLabels(octokit, owner, repo, prNumber, result, config) {
   for (const label of labelsToAdd) {
     try {
       await ensureLabelExists(octokit, owner, repo, label);
-      await octokit.rest.issues.addLabels({
-        owner,
-        repo,
-        issue_number: prNumber,
-        labels: [label]
-      });
-      core2.info(`Added label: "${label}"`);
+      await octokit.rest.issues.addLabels({ owner, repo, issue_number: prNumber, labels: [label] });
+      core3.info(`Added label: "${label}"`);
     } catch (e) {
-      core2.warning(`Could not add label "${label}": ${e.message}`);
+      core3.warning(`Could not add label "${label}": ${e.message}`);
     }
   }
   const { data: currentLabels } = await octokit.rest.issues.listLabelsOnIssue({
@@ -26668,15 +26837,10 @@ async function manageLabels(octokit, owner, repo, prNumber, result, config) {
   for (const label of labelsToRemove) {
     if (currentLabels.some((l) => l.name === label)) {
       try {
-        await octokit.rest.issues.removeLabel({
-          owner,
-          repo,
-          issue_number: prNumber,
-          name: label
-        });
-        core2.info(`Removed label: "${label}"`);
+        await octokit.rest.issues.removeLabel({ owner, repo, issue_number: prNumber, name: label });
+        core3.info(`Removed label: "${label}"`);
       } catch (e) {
-        core2.warning(`Could not remove label "${label}": ${e.message}`);
+        core3.warning(`Could not remove label "${label}": ${e.message}`);
       }
     }
   }

@@ -5,6 +5,7 @@ import { detectAiSignals, calculateAiConfidence, detectLanguage } from "./detect
 import { scoreFile, aggregateScore, isAnalyzableFile } from "./scorer.js";
 import { buildPrComment } from "./commenter.js";
 import { runLlmAnalysis, buildCombinedDiff, blendScores } from "./llm-analyzer.js";
+import { saveScoreHistory, writeWorkflowSummary } from "./history.js";
 import type {
   ActionConfig,
   AnalysisResult,
@@ -38,7 +39,7 @@ async function run(): Promise<void> {
     if (config.llmProvider) {
       core.info(`LLM analysis enabled: ${config.llmProvider} / ${config.llmModel}`);
     } else {
-      core.info("LLM analysis: disabled (no API key provided — using heuristics only)");
+      core.info("LLM analysis: disabled (no API key — using heuristics only)");
     }
 
     const { data: prFiles } = await octokit.rest.pulls.listFiles({
@@ -65,7 +66,7 @@ async function run(): Promise<void> {
     const fileAnalyses: FileAnalysis[] = [];
 
     for (const file of filesToAnalyze) {
-      core.info(`  → Heuristic analysis: ${file.filename}`);
+      core.info(`  → Heuristic: ${file.filename}`);
       const patch = file.patch ?? "";
       const addedLines = patch
         .split("\n")
@@ -78,12 +79,7 @@ async function run(): Promise<void> {
       const language = detectLanguage(file.filename);
       const aiSignals = detectAiSignals(addedCode, file.filename);
       const aiConfidence = calculateAiConfidence(aiSignals);
-      const { score, deductions } = scoreFile(
-        file.filename,
-        patch,
-        aiSignals,
-        aiConfidence
-      );
+      const { score, deductions } = scoreFile(file.filename, patch, aiSignals, aiConfidence);
 
       fileAnalyses.push({
         filename: file.filename,
@@ -103,7 +99,7 @@ async function run(): Promise<void> {
         ? Math.max(...fileAnalyses.map((f) => f.aiConfidence))
         : 0;
 
-    // --- LLM analysis (optional, blended in if enabled) ---
+    // --- LLM analysis (optional) ---
     let llmAnalysis = null;
     let finalScore = heuristicScore;
     let finalAiConfidence = heuristicAiConfidence;
@@ -116,7 +112,6 @@ async function run(): Promise<void> {
           linesAdded: fileAnalyses.find((a) => a.filename === f.filename)?.linesAdded ?? 0,
         }))
       );
-
       const languages = [...new Set(fileAnalyses.map((f) => f.language))].filter(
         (l) => l !== "Unknown"
       );
@@ -134,7 +129,7 @@ async function run(): Promise<void> {
         finalScore = blended.qualityScore;
         finalAiConfidence = blended.aiConfidence;
         core.info(`  Blended score: heuristic=${heuristicScore} + LLM=${llmAnalysis.quality_score} → ${finalScore}`);
-        core.info(`  Blended AI confidence: heuristic=${Math.round(heuristicAiConfidence * 100)}% + LLM=${Math.round(llmAnalysis.ai_probability * 100)}% → ${Math.round(finalAiConfidence * 100)}%`);
+        core.info(`  Blended AI confidence: ${Math.round(heuristicAiConfidence * 100)}% + ${Math.round(llmAnalysis.ai_probability * 100)}% → ${Math.round(finalAiConfidence * 100)}%`);
       }
     }
 
@@ -162,7 +157,7 @@ async function run(): Promise<void> {
 
     core.info(`\n📊 Analysis complete:`);
     core.info(`   Quality Score: ${finalScore}/100`);
-    core.info(`   AI Detected: ${aiDetected} (confidence: ${Math.round(finalAiConfidence * 100)}%)`);
+    core.info(`   AI Detected: ${aiDetected} (${Math.round(finalAiConfidence * 100)}%)`);
     core.info(`   Passed: ${passed} (threshold: ${config.minQualityScore})`);
 
     core.setOutput("quality-score", String(finalScore));
@@ -179,13 +174,30 @@ async function run(): Promise<void> {
       await manageLabels(octokit, repoOwner, repoName, prNumber, result, config);
     }
 
+    // --- Score history tracking ---
+    if (config.trackHistory) {
+      try {
+        await saveScoreHistory(octokit, result, config.historyBranch);
+      } catch (e) {
+        core.warning(
+          `Could not save score history: ${(e as Error).message}. ` +
+          `Make sure the workflow has "contents: write" permission and the branch "${config.historyBranch}" exists.`
+        );
+      }
+    }
+
+    // --- Workflow summary ---
+    await writeWorkflowSummary(result, null).catch(() => {
+      // Non-fatal
+    });
+
     if (!passed && config.failOnLowQuality) {
       core.setFailed(
         `PR quality score ${finalScore}/100 is below the required threshold of ${config.minQualityScore}/100.`
       );
     } else if (!passed) {
       core.warning(
-        `PR quality score ${finalScore}/100 is below the threshold of ${config.minQualityScore}/100. Consider reviewing the contribution.`
+        `PR quality score ${finalScore}/100 is below the threshold of ${config.minQualityScore}/100.`
       );
     } else {
       core.info(`✅ PR passed quality check with score ${finalScore}/100.`);
@@ -217,6 +229,9 @@ function readConfig(): ActionConfig {
     llmModel = core.getInput("llm-model") || "claude-3-haiku-20240307";
   }
 
+  const defaultBranch =
+    github.context.payload.repository?.default_branch as string | undefined ?? "main";
+
   return {
     minQualityScore: parseInt(core.getInput("min-quality-score") || "50", 10),
     aiDetectionThreshold: parseFloat(core.getInput("ai-detection-threshold") || "0.65"),
@@ -234,6 +249,8 @@ function readConfig(): ActionConfig {
     llmProvider,
     llmApiKey,
     llmModel,
+    trackHistory: core.getInput("track-history") !== "false",
+    historyBranch: core.getInput("history-branch") || defaultBranch,
   };
 }
 
@@ -255,13 +272,10 @@ function buildSummary(
       signalCounts.set(s.description, (signalCounts.get(s.description) ?? 0) + s.matches);
     }
   }
-  // Merge LLM AI indicators into top signals
   const llmIndicators = llm?.ai_indicators ?? [];
   const topAiSignals = [
     ...llmIndicators,
-    ...[...signalCounts.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .map(([desc]) => desc),
+    ...[...signalCounts.entries()].sort((a, b) => b[1] - a[1]).map(([d]) => d),
   ].slice(0, 6);
 
   const deductionCounts = new Map<string, number>();
@@ -273,9 +287,7 @@ function buildSummary(
   const llmIssues = llm?.quality_issues ?? [];
   const topQualityIssues = [
     ...llmIssues,
-    ...[...deductionCounts.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .map(([reason]) => reason),
+    ...[...deductionCounts.entries()].sort((a, b) => b[1] - a[1]).map(([r]) => r),
   ].slice(0, 6);
 
   const languageSet = new Set(fileAnalyses.map((f) => f.language));
@@ -291,9 +303,7 @@ function buildSummary(
       f.filename.includes("/test/")
   );
 
-  const hasDocumentation = allFiles.some(
-    (f) => /\.(md|rst|txt)$/.test(f.filename)
-  );
+  const hasDocumentation = allFiles.some((f) => /\.(md|rst|txt)$/.test(f.filename));
 
   return {
     totalLinesAdded,
@@ -327,20 +337,10 @@ async function postOrUpdateComment(
   const existing = comments.find((c) => c.body?.includes(marker));
 
   if (existing) {
-    await octokit.rest.issues.updateComment({
-      owner,
-      repo,
-      comment_id: existing.id,
-      body,
-    });
+    await octokit.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
     core.info("Updated existing quality report comment.");
   } else {
-    await octokit.rest.issues.createComment({
-      owner,
-      repo,
-      issue_number: prNumber,
-      body,
-    });
+    await octokit.rest.issues.createComment({ owner, repo, issue_number: prNumber, body });
     core.info("Posted quality report comment.");
   }
 }
@@ -373,12 +373,7 @@ async function manageLabels(
   for (const label of labelsToAdd) {
     try {
       await ensureLabelExists(octokit, owner, repo, label);
-      await octokit.rest.issues.addLabels({
-        owner,
-        repo,
-        issue_number: prNumber,
-        labels: [label],
-      });
+      await octokit.rest.issues.addLabels({ owner, repo, issue_number: prNumber, labels: [label] });
       core.info(`Added label: "${label}"`);
     } catch (e) {
       core.warning(`Could not add label "${label}": ${(e as Error).message}`);
@@ -394,12 +389,7 @@ async function manageLabels(
   for (const label of labelsToRemove) {
     if (currentLabels.some((l) => l.name === label)) {
       try {
-        await octokit.rest.issues.removeLabel({
-          owner,
-          repo,
-          issue_number: prNumber,
-          name: label,
-        });
+        await octokit.rest.issues.removeLabel({ owner, repo, issue_number: prNumber, name: label });
         core.info(`Removed label: "${label}"`);
       } catch (e) {
         core.warning(`Could not remove label "${label}": ${(e as Error).message}`);
@@ -433,7 +423,7 @@ async function ensureLabelExists(
         description: `Applied by AI Contribution Quality Filter`,
       });
     } catch {
-      // Label might have been created concurrently — ignore
+      // Created concurrently — ignore
     }
   }
 }

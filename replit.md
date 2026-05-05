@@ -61,6 +61,14 @@ lib/                     # Shared libraries
 - `dist/index.js` at the repo root must be committed — it is the compiled action bundle that GitHub Actions downloads when people use `uses: Noorislam-XD/AI-Contribution-Quality-Filter@v1`
 - The `.gitignore` excludes subdirectory `dist/` folders but allows the root `dist/` to be committed
 - After any changes to `action/src/`, rebuild with `pnpm --filter ai-contribution-quality-filter-action run build`
+- History tracking requires `contents: write` permission in the user's workflow — this is documented in the README and example workflows
+
+## Score History & Badge
+
+- Each PR analysis writes an entry to `.github/quality-scores.json` (up to 200 entries, newest first)
+- `.github/quality-badge.json` is updated with average score + shields.io endpoint format
+- Badge URL: `https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/{owner}/{repo}/{branch}/.github/quality-badge.json`
+- Workflow summary is written to `$GITHUB_STEP_SUMMARY` on every run (visible in Actions UI)
 
 ## AI Detection Signals
 

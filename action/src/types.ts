@@ -104,4 +104,6 @@ export interface ActionConfig {
   llmProvider: LlmProvider | null;
   llmApiKey: string | null;
   llmModel: string;
+  trackHistory: boolean;
+  historyBranch: string;
 }

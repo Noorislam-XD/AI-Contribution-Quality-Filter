@@ -72,6 +72,22 @@ inputs:
     required: false
     default: 'quality-verified'
 
+  # ── Score history & badge ───────────────────────────────────────────────────
+  track-history:
+    description: |
+      Save a score history entry to .github/quality-scores.json and update
+      .github/quality-badge.json on every PR analysis.
+      Requires "contents: write" permission in your workflow.
+      Set to "false" to disable.
+    required: false
+    default: 'true'
+  history-branch:
+    description: |
+      Branch where .github/quality-scores.json and .github/quality-badge.json
+      are written. Defaults to the repository default branch (main/master).
+    required: false
+    default: ''
+
   # ── Performance ─────────────────────────────────────────────────────────────
   max-files-analyzed:
     description: 'Maximum number of files to analyze per PR (for performance).'
