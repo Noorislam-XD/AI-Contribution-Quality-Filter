@@ -1,5 +1,5 @@
 name: 'AI Contribution Quality Filter'
-description: 'Detects AI-generated code in pull requests and scores code quality (0-100) to help maintainers filter low-quality contributions.'
+description: 'Detects AI-generated code in PRs and scores quality (0-100) to help maintainers filter bad contributions.
 author: 'Noorislam-XD'
 
 branding:
